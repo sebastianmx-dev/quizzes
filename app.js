@@ -146,22 +146,136 @@ var AV_PRESETS=[
   '1-4-3-0-1-1-0-2','6-4-6-0-3-0-0-3','3-4-7-0-0-1-3-1','5-4-2-0-1-4-1-0','2-4-5-0-1-1-0-5','5-4-8-3-0-0-0-4'
 ];
 var avN=0;
+var ANIMALS=['Gato','Cachorro','Panda','Raposa','Coelho','Urso','Sapo','Coruja','Pinguim','Leão','Coala','Tigre'];
+var ANIMAL_PRESETS=['a0-1-0','a1-7-0','a2-3-0','a3-5-0','a4-0-0','a5-2-5','a6-6-0','a7-4-0','a8-2-0','a9-4-4','a10-3-1','a11-1-2'];
+function accSvg(i){
+  return ['',
+    '<g fill="none" stroke="#1A1A1A" stroke-width="1.6"><circle cx="26" cy="33" r="4.6"/><circle cx="38" cy="33" r="4.6"/><path d="M30.6 33H33.4"/></g>',
+    '<g fill="#111"><rect x="20.5" y="29.5" width="10" height="7" rx="3"/><rect x="33.5" y="29.5" width="10" height="7" rx="3"/></g><path d="M30.5 32H33.5" stroke="#111" stroke-width="1.6"/>',
+    '<path d="M15 34C15 17 49 17 49 34" fill="none" stroke="#24242C" stroke-width="3"/><rect x="12" y="29" width="6.5" height="11" rx="2.5" fill="#24242C"/><rect x="45.5" y="29" width="6.5" height="11" rx="2.5" fill="#24242C"/>',
+    '<path d="M21 19L23 8L28 14L32 6L36 14L41 8L43 19Z" fill="#F2B200" stroke="#A97A00" stroke-width="1.2" stroke-linejoin="round"/>',
+    '<path d="M16 28C16 13 48 13 48 28Z" fill="#C9303F"/><rect x="15" y="24" width="34" height="7" rx="3.5" fill="#F3F0EA"/><circle cx="32" cy="11" r="4.2" fill="#F3F0EA"/>'][i]||'';
+}
+function animalSvg(a,size){
+  var cid='avc'+(++avN), D='#1B1410';
+  var m='<svg class="av" viewBox="0 0 64 64" width="'+size+'" height="'+size+'" aria-hidden="true"><defs><clipPath id="'+cid+'"><circle cx="32" cy="32" r="32"/></clipPath></defs><g clip-path="url(#'+cid+')"><rect width="64" height="64" fill="'+AV.bg[a.bg]+'"/>';
+  function body(c,belly){var s='<path d="M8 66C8 51 19 46 32 46S56 51 56 66Z" fill="'+c+'"/>';if(belly)s+='<ellipse cx="32" cy="63" rx="12" ry="12" fill="'+belly+'"/>';return s}
+  function eyes(y){y=y||33;return '<circle cx="26" cy="'+y+'" r="2.3" fill="'+D+'"/><circle cx="38" cy="'+y+'" r="2.3" fill="'+D+'"/><circle cx="26.8" cy="'+(y-.8)+'" r=".7" fill="#fff"/><circle cx="38.8" cy="'+(y-.8)+'" r=".7" fill="#fff"/>'}
+  function smile(y,c){return '<path d="M32 '+y+'q-1.8 2.4-4 1M32 '+y+'q1.8 2.4 4 1" fill="none" stroke="'+(c||D)+'" stroke-width="1.4" stroke-linecap="round"/>'}
+  var s='', c, dk, w, lt;
+  switch(a.kind){
+  case 0: c='#F2A541';dk='#C97B1E';
+    s=body(c)+'<path d="M17.5 27L18.5 11L30 20Z" fill="'+c+'"/><path d="M46.5 27L45.5 11L34 20Z" fill="'+c+'"/>'
+     +'<path d="M20.3 23L20.9 15.3L26.8 19.8Z" fill="#F5A9B8"/><path d="M43.7 23L43.1 15.3L37.2 19.8Z" fill="#F5A9B8"/>'
+     +'<circle cx="32" cy="34" r="15" fill="'+c+'"/>'
+     +'<path d="M29 20.5q1 3 0 5M32 19.5v5.5M35 20.5q-1 3 0 5" stroke="'+dk+'" stroke-width="1.6" stroke-linecap="round" fill="none"/>'
+     +'<ellipse cx="32" cy="40" rx="6.5" ry="4.5" fill="#FFE6C7"/>'
+     +eyes()+'<path d="M30.2 37.6h3.6l-1.8 2z" fill="#E8798A"/>'+smile(39.6)
+     +'<path d="M22 39.5l-7-1.5M22 41.5l-7 1M42 39.5l7-1.5M42 41.5l7 1" stroke="#7A4A1A" stroke-width=".9" stroke-linecap="round"/>';
+    break;
+  case 1: c='#C68A5E';dk='#7A4A2A';
+    s=body(c)+'<circle cx="32" cy="34" r="15" fill="'+c+'"/>'
+     +'<ellipse cx="17.5" cy="33" rx="5" ry="10.5" transform="rotate(18 17.5 33)" fill="'+dk+'"/><ellipse cx="46.5" cy="33" rx="5" ry="10.5" transform="rotate(-18 46.5 33)" fill="'+dk+'"/>'
+     +'<ellipse cx="38.5" cy="31.5" rx="5" ry="4.5" fill="#E8C29C"/>'
+     +'<ellipse cx="32" cy="41" rx="8" ry="6" fill="#F1D7BC"/>'
+     +eyes()+'<ellipse cx="32" cy="38" rx="3.2" ry="2.3" fill="'+D+'"/>'+smile(40.3)
+     +'<path d="M30.3 42.6q1.7 3.4 3.4 0z" fill="#E8798A"/>';
+    break;
+  case 2: w='#F7F7F5';dk='#1F1F24';
+    s=body(dk,w)+'<circle cx="19.5" cy="21.5" r="5.5" fill="'+dk+'"/><circle cx="44.5" cy="21.5" r="5.5" fill="'+dk+'"/>'
+     +'<circle cx="32" cy="34" r="15" fill="'+w+'"/>'
+     +'<ellipse cx="25.5" cy="33.5" rx="4.4" ry="5.6" transform="rotate(-28 25.5 33.5)" fill="'+dk+'"/><ellipse cx="38.5" cy="33.5" rx="4.4" ry="5.6" transform="rotate(28 38.5 33.5)" fill="'+dk+'"/>'
+     +'<circle cx="26" cy="33" r="1.9" fill="#fff"/><circle cx="38" cy="33" r="1.9" fill="#fff"/><circle cx="26.3" cy="33.3" r="1" fill="'+dk+'"/><circle cx="38.3" cy="33.3" r="1" fill="'+dk+'"/>'
+     +'<ellipse cx="32" cy="39" rx="2.4" ry="1.7" fill="'+dk+'"/>'+smile(40.6,dk);
+    break;
+  case 3: c='#E86A2E';
+    s=body(c,'#FFF3E6')+'<path d="M17 28L15.5 9L30 19Z" fill="'+c+'"/><path d="M47 28L48.5 9L34 19Z" fill="'+c+'"/>'
+     +'<path d="M19.5 23L18.8 13.5L26.5 18.8Z" fill="#3A2416"/><path d="M44.5 23L45.2 13.5L37.5 18.8Z" fill="#3A2416"/>'
+     +'<circle cx="32" cy="34" r="15" fill="'+c+'"/>'
+     +'<path d="M17.2 35C22 35.5 28 38.5 32 45C36 38.5 42 35.5 46.8 35C46 43.5 40 49 32 49S18 43.5 17.2 35Z" fill="#FFF3E6"/>'
+     +eyes(32)+'<ellipse cx="32" cy="42.5" rx="2.4" ry="1.8" fill="'+D+'"/>';
+    break;
+  case 4: c='#ECE6F2';lt='#F5A9B8';
+    s=body(c)+'<ellipse cx="24.5" cy="12" rx="4.6" ry="12.5" transform="rotate(-8 24.5 12)" fill="'+c+'"/><ellipse cx="39.5" cy="12" rx="4.6" ry="12.5" transform="rotate(8 39.5 12)" fill="'+c+'"/>'
+     +'<ellipse cx="24.5" cy="13" rx="2.2" ry="9" transform="rotate(-8 24.5 13)" fill="'+lt+'"/><ellipse cx="39.5" cy="13" rx="2.2" ry="9" transform="rotate(8 39.5 13)" fill="'+lt+'"/>'
+     +'<circle cx="32" cy="35" r="15" fill="'+c+'"/>'
+     +'<circle cx="23" cy="40" r="2.6" fill="'+lt+'" opacity=".55"/><circle cx="41" cy="40" r="2.6" fill="'+lt+'" opacity=".55"/>'
+     +eyes(34)+'<path d="M30.4 38.3h3.2l-1.6 1.8z" fill="#E8798A"/>'+smile(40.1)
+     +'<rect x="30.4" y="41.2" width="3.2" height="3.2" rx=".6" fill="#fff" stroke="#D9D2E3" stroke-width=".5"/>';
+    break;
+  case 5: c='#8D5A3B';
+    s=body(c)+'<circle cx="19" cy="21" r="6" fill="'+c+'"/><circle cx="45" cy="21" r="6" fill="'+c+'"/><circle cx="19" cy="21" r="3.2" fill="#C9A27A"/><circle cx="45" cy="21" r="3.2" fill="#C9A27A"/>'
+     +'<circle cx="32" cy="34" r="15" fill="'+c+'"/>'
+     +'<ellipse cx="32" cy="40.5" rx="7.5" ry="5.8" fill="#C9A27A"/>'
+     +eyes()+'<ellipse cx="32" cy="38.2" rx="3" ry="2.2" fill="'+D+'"/>'+smile(40.4);
+    break;
+  case 6: c='#5DBB63';dk='#3E9645';
+    s=body(c,'#BFE7B0')+'<circle cx="23" cy="25" r="7.5" fill="'+c+'"/><circle cx="41" cy="25" r="7.5" fill="'+c+'"/>'
+     +'<ellipse cx="32" cy="37" rx="17" ry="12.5" fill="'+c+'"/>'
+     +'<circle cx="23" cy="25" r="5" fill="#fff"/><circle cx="41" cy="25" r="5" fill="#fff"/><circle cx="23.6" cy="25.6" r="2.4" fill="'+D+'"/><circle cx="41.6" cy="25.6" r="2.4" fill="'+D+'"/>'
+     +'<circle cx="22" cy="40" r="2.6" fill="#F28CA0" opacity=".55"/><circle cx="42" cy="40" r="2.6" fill="#F28CA0" opacity=".55"/>'
+     +'<path d="M22.5 38.5Q32 47 41.5 38.5" fill="none" stroke="'+dk+'" stroke-width="1.8" stroke-linecap="round"/>'
+     +'<circle cx="29.5" cy="34" r=".9" fill="'+dk+'"/><circle cx="34.5" cy="34" r=".9" fill="'+dk+'"/>';
+    break;
+  case 7: c='#9C6B3F';lt='#E8CFA5';
+    s=body(c,lt)+'<path d="M18 24L17 11L27 19Z" fill="'+c+'"/><path d="M46 24L47 11L37 19Z" fill="'+c+'"/>'
+     +'<circle cx="32" cy="33" r="15.5" fill="'+c+'"/>'
+     +'<path d="M17.5 32C17.5 24 24 20 32 27C40 20 46.5 24 46.5 32C46.5 41 40 46 32 46S17.5 41 17.5 32Z" fill="'+lt+'"/>'
+     +'<circle cx="25" cy="32" r="6" fill="#fff"/><circle cx="39" cy="32" r="6" fill="#fff"/><circle cx="25" cy="32" r="3.4" fill="#F2B200"/><circle cx="39" cy="32" r="3.4" fill="#F2B200"/><circle cx="25" cy="32" r="1.9" fill="'+D+'"/><circle cx="39" cy="32" r="1.9" fill="'+D+'"/>'
+     +'<path d="M29.8 37L34.2 37L32 41.5Z" fill="#E8862A"/>';
+    break;
+  case 8: c='#1E2A3A';w='#F7F7F5';
+    s=body(c,w)+'<circle cx="32" cy="33" r="15.5" fill="'+c+'"/>'
+     +'<path d="M32 26.5C35 22.5 44.5 23.5 44.5 33C44.5 42 38.5 47 32 47S19.5 42 19.5 33C19.5 23.5 29 22.5 32 26.5Z" fill="'+w+'"/>'
+     +eyes()+'<path d="M28.6 37.2h6.8l-3.4 4z" fill="#F2A541"/>'
+     +'<circle cx="23" cy="39.5" r="2.4" fill="#F28CA0" opacity=".5"/><circle cx="41" cy="39.5" r="2.4" fill="#F28CA0" opacity=".5"/>';
+    break;
+  case 9: c='#F2B24A';dk='#B5642C';
+    var mn='';for(var ai=0;ai<14;ai++){var an=ai/14*6.283;mn+='<circle cx="'+(32+Math.cos(an)*17).toFixed(1)+'" cy="'+(33+Math.sin(an)*17).toFixed(1)+'" r="6.5"/>'}
+    s=body(c)+'<g fill="'+dk+'">'+mn+'<circle cx="32" cy="33" r="17"/></g>'
+     +'<circle cx="21" cy="22" r="3.6" fill="'+c+'"/><circle cx="43" cy="22" r="3.6" fill="'+c+'"/>'
+     +'<circle cx="32" cy="34" r="13.5" fill="'+c+'"/>'
+     +'<ellipse cx="32" cy="40.5" rx="7" ry="5.2" fill="#FFE2A8"/>'
+     +eyes()+'<path d="M29.4 37.4h5.2l-2.6 2.8z" fill="#7A3E1E"/>'+smile(40.2,'#7A3E1E');
+    break;
+  case 10: c='#9EA3AD';lt='#E3E6EC';
+    s=body(c,lt)+'<circle cx="16" cy="25" r="8.5" fill="'+c+'"/><circle cx="48" cy="25" r="8.5" fill="'+c+'"/><circle cx="16" cy="25" r="5" fill="'+lt+'"/><circle cx="48" cy="25" r="5" fill="'+lt+'"/>'
+     +'<circle cx="32" cy="34" r="15" fill="'+c+'"/>'
+     +eyes(32)+'<ellipse cx="32" cy="38.5" rx="3.8" ry="4.8" fill="#3A3F4A"/><ellipse cx="31" cy="37" rx="1.2" ry="1.6" fill="#6B7180"/>';
+    break;
+  default: c='#F08A24';dk='#3A2416';w='#FFF3E6';
+    s=body(c,w)+'<circle cx="19.5" cy="21.5" r="5" fill="'+c+'"/><circle cx="44.5" cy="21.5" r="5" fill="'+c+'"/><circle cx="19.5" cy="21.5" r="2.6" fill="'+w+'"/><circle cx="44.5" cy="21.5" r="2.6" fill="'+w+'"/>'
+     +'<circle cx="32" cy="34" r="15" fill="'+c+'"/>'
+     +'<path d="M17.2 35.5C22 36 27 38.5 32 44C37 38.5 42 36 46.8 35.5C46 44 40 49 32 49S18 44 17.2 35.5Z" fill="'+w+'"/>'
+     +'<g fill="'+dk+'"><path d="M29 19.5l3 6 3-6z"/><path d="M24 21.5l3.5 4.5-1 1z"/><path d="M40 21.5l-3.5 4.5 1 1z"/><path d="M17.5 31l6 1.5-6 1.5z"/><path d="M46.5 31l-6 1.5 6 1.5z"/></g>'
+     +eyes()+'<path d="M30.2 38.6h3.6l-1.8 2z" fill="#E8798A"/>'+smile(40.6);
+  }
+  m+=s+accSvg(a.acc)+'</g></svg>';
+  return tpl(m);
+}
 function avParse(s){
-  var parts=String(s||'').split('-'), a={};
+  s=String(s||'');
+  var am=/^a(\d+)-(\d+)-(\d+)$/.exec(s);
+  if(am){var k=+am[1],b=+am[2],c=+am[3];return {type:'animal',kind:k<ANIMALS.length?k:0,bg:b<AV.bg.length?b:0,acc:c<6?c:0}}
+  var parts=s.split('-'), a={};
   AV_PARTS.forEach(function(p,i){var n=parseInt(parts[i],10);a[p[0]]=(n>=0&&n<p[2])?n:0});
   return a;
 }
-function avStr(a){return AV_PARTS.map(function(p){return a[p[0]]}).join('-')}
+function avStr(a){if(a&&a.type==='animal')return 'a'+a.kind+'-'+a.bg+'-'+a.acc;return AV_PARTS.map(function(p){return a[p[0]]}).join('-')}
+function allPresets(){return AV_PRESETS.concat(ANIMAL_PRESETS)}
 function avRandom(){
-  return avParse(AV_PRESETS[Math.floor(Math.random()*AV_PRESETS.length)]);
+  var all=allPresets();
+  return avParse(all[Math.floor(Math.random()*all.length)]);
 }
 function avFromName(name){
   var x=2166136261;
   String(name||'').split('').forEach(function(c){x^=c.charCodeAt(0);x=Math.imul(x,16777619)>>>0});
-  return avParse(AV_PRESETS[(Math.imul(x,0x85EBCA6B)>>>0)%AV_PRESETS.length]);
+  var all=allPresets();
+  return avParse(all[(Math.imul(x,0x85EBCA6B)>>>0)%all.length]);
 }
 function avOf(entry){return entry&&typeof entry.avatar==='string'?avParse(entry.avatar):avFromName(entry&&entry.name)}
 function avSvg(a,size){
+  if(a&&a.type==='animal') return animalSvg(a,size);
   var sk=AV.skin[a.skin], hc=AV.hc[a.hc], D='#1B1410', cid='avc'+(++avN), m='';
   m+='<svg class="av" viewBox="0 0 64 64" width="'+size+'" height="'+size+'" aria-hidden="true">';
   m+='<defs><clipPath id="'+cid+'"><circle cx="32" cy="32" r="32"/></clipPath></defs><g clip-path="url(#'+cid+')">';
@@ -194,12 +308,7 @@ function avSvg(a,size){
     '<path d="M28 40.5H36" stroke="'+D+'" stroke-width="1.8" stroke-linecap="round"/>',
     '<ellipse cx="32" cy="41" rx="2.4" ry="3" fill="#5A1F1F"/>',
     grin+'<ellipse cx="32" cy="42.6" rx="3" ry="1.9" fill="#E8798A"/>'][a.mouth];
-  m+=['',
-    '<g fill="none" stroke="#1A1A1A" stroke-width="1.6"><circle cx="26" cy="33" r="4.6"/><circle cx="38" cy="33" r="4.6"/><path d="M30.6 33H33.4"/></g>',
-    '<g fill="#111"><rect x="20.5" y="29.5" width="10" height="7" rx="3"/><rect x="33.5" y="29.5" width="10" height="7" rx="3"/></g><path d="M30.5 32H33.5" stroke="#111" stroke-width="1.6"/>',
-    '<path d="M15 34C15 17 49 17 49 34" fill="none" stroke="#24242C" stroke-width="3"/><rect x="12" y="29" width="6.5" height="11" rx="2.5" fill="#24242C"/><rect x="45.5" y="29" width="6.5" height="11" rx="2.5" fill="#24242C"/>',
-    '<path d="M21 19L23 8L28 14L32 6L36 14L41 8L43 19Z" fill="#F2B200" stroke="#A97A00" stroke-width="1.2" stroke-linejoin="round"/>',
-    '<path d="M16 28C16 13 48 13 48 28Z" fill="#C9303F"/><rect x="15" y="24" width="34" height="7" rx="3.5" fill="#F3F0EA"/><circle cx="32" cy="11" r="4.2" fill="#F3F0EA"/>'][a.acc];
+  m+=accSvg(a.acc);
   m+='</g></svg>';
   return tpl(m);
 }
@@ -210,19 +319,25 @@ function setAvatar(a){
 }
 function avatarPicker(){
   var cur=avStr(S.avatar);
-  var presets=h('div',{class:'av-grid',role:'group','aria-label':'Escolha um avatar'},AV_PRESETS.map(function(s,i){
-    var b=h('button',{class:'av-opt',id:'avp-'+i,'aria-pressed':String(s===cur),'aria-label':'Avatar '+(i+1),onclick:function(){setAvatar(avParse(s))}});
-    b.append(avSvg(avParse(s),52));
-    return b;
-  }));
+  function grid(list,prefix,label,names){
+    return h('div',{class:'av-grid',role:'group','aria-label':label},list.map(function(s,i){
+      var b=h('button',{class:'av-opt',id:prefix+i,'aria-pressed':String(s===cur),'aria-label':names?names[i]:label+' '+(i+1),title:names?names[i]:null,onclick:function(){setAvatar(avParse(s))}});
+      b.append(avSvg(avParse(s),52));
+      return b;
+    }));
+  }
+  var animalNames=ANIMAL_PRESETS.map(function(s){return ANIMALS[avParse(s).kind]});
   return h('div',{class:'av-picker'},
     h('div',{class:'bar'},
       h('span',{class:'lbl',style:'margin:0'},'Escolha um avatar'),
       h('button',{class:'btn sm',id:'av-rand',onclick:function(){
-        var a;do{a=avRandom()}while(AV_PRESETS.length>1&&avStr(a)===avStr(S.avatar));
+        var a;do{a=avRandom()}while(avStr(a)===avStr(S.avatar));
         setAvatar(a);
       }},'Aleatório')),
-    presets);
+    h('span',{class:'av-sec'},'Pessoas'),
+    grid(AV_PRESETS,'avp-','Pessoa'),
+    h('span',{class:'av-sec'},'Animais'),
+    grid(ANIMAL_PRESETS,'ava-','Animal',animalNames));
 }
 
 /* ---------- som: efeitos e música gerados no navegador ---------- */
