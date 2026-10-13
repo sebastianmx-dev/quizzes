@@ -1,0 +1,265 @@
+{
+  "quizzes": [
+    {
+      "title": "Futuro em português",
+      "subject": "Português",
+      "level": "A2–B1",
+      "description": "Futuro simples, futuro perifrástico, verbos irregulares, mesóclise, futuro composto e conjuntivo futuro.",
+      "timeLimit": 20,
+      "questions": [
+        {
+          "q": "Amanhã eu ___ (falar) com o professor.",
+          "options": [
+            "falaria",
+            "falei",
+            "falarei",
+            "falava"
+          ],
+          "answer": 2,
+          "explain": "O futuro simples forma-se com o infinitivo mais as terminações -ei, -ás, -á, -emos, -eis, -ão: falar + ei = falarei."
+        },
+        {
+          "q": "No sábado, eles ___ (comer) fora.",
+          "options": [
+            "comeram",
+            "comerão",
+            "comeriam",
+            "comiam"
+          ],
+          "answer": 1,
+          "explain": "Na 3.ª pessoa do plural, o futuro simples acrescenta -ão ao infinitivo: comer + ão = comerão."
+        },
+        {
+          "q": "Logo à noite, eu ___ estudar para o exame.",
+          "options": [
+            "fui",
+            "iria",
+            "irás",
+            "vou"
+          ],
+          "answer": 3,
+          "explain": "O futuro perifrástico usa o verbo ir no presente mais o infinitivo: vou estudar. É a forma mais comum na fala para um futuro próximo."
+        },
+        {
+          "q": "Qual é o futuro simples de “fazer” na 1.ª pessoa do singular?",
+          "options": [
+            "farei",
+            "fazerei",
+            "fiz",
+            "faria"
+          ],
+          "answer": 0,
+          "explain": "Fazer, dizer e trazer perdem a sílaba -ze- no futuro: farei, direi, trarei."
+        },
+        {
+          "q": "Qual destas frases está no futuro simples?",
+          "options": [
+            "Eu partia amanhã cedo.",
+            "Eu parto amanhã cedo.",
+            "Eu partirei amanhã cedo.",
+            "Eu parti amanhã cedo."
+          ],
+          "answer": 2,
+          "explain": "Só “partirei” é futuro simples. “Parto amanhã” é presente com valor de futuro, algo comum na conversa."
+        },
+        {
+          "q": "Qual é a forma correta de “dar-lhe o livro”, no futuro simples e em registo formal? ___ amanhã o livro.",
+          "options": [
+            "Lhe darei",
+            "Dar-lhe-ei",
+            "Darei-lhe",
+            "Dar-lhei"
+          ],
+          "answer": 1,
+          "explain": "No futuro simples, o pronome pode ficar no meio do verbo (mesóclise): dar-lhe-ei. Depois de “não” ou “já”, o pronome vem antes: “Não lhe darei”.",
+          "time": 30
+        },
+        {
+          "q": "Até sexta-feira, eu já ___ o projeto (terminar).",
+          "options": [
+            "terminei",
+            "terminava",
+            "terei terminado",
+            "terminaria"
+          ],
+          "answer": 2,
+          "explain": "O futuro composto (ter no futuro + particípio) indica uma ação concluída antes de um momento futuro: terei terminado."
+        },
+        {
+          "q": "Se eu ___ tempo amanhã, passo por aí. (ter)",
+          "options": [
+            "tenho",
+            "tinha",
+            "teria",
+            "tiver"
+          ],
+          "answer": 3,
+          "explain": "Depois de “se” e “quando” com sentido de futuro usa-se o conjuntivo futuro: se eu tiver, quando eu chegar."
+        },
+        {
+          "q": "Quando eu ___ grande, vou ser astronauta. (ser)",
+          "options": [
+            "for",
+            "sou",
+            "seja",
+            "serei"
+          ],
+          "answer": 0,
+          "explain": "O conjuntivo futuro de ser e de ir é “for”: quando eu for, quando tu fores, quando nós formos."
+        },
+        {
+          "q": "— Onde está o João? — ___ em casa.",
+          "options": [
+            "Esteve",
+            "Estará",
+            "Estava",
+            "Esteja"
+          ],
+          "answer": 1,
+          "explain": "O futuro simples também exprime hipótese sobre o presente: “Estará em casa” equivale a “Deve estar em casa”.",
+          "time": 30,
+          "double": true
+        }
+      ]
+    },
+    {
+      "title": "Imperfeito do Indicativo",
+      "subject": "Português",
+      "level": "A1-A2",
+      "description": "Usar este tempo verbal para descrever hábitos do passado",
+      "timeLimit": 20,
+      "questions": [
+        {
+          "q": "1. Quando eu era criança, eu ______ muito chocolate. (comer)",
+          "options": [
+            "comia",
+            "comi",
+            "comía"
+          ],
+          "answer": 0,
+          "explain": ""
+        },
+        {
+          "q": "2. Nós ______ na mesma rua quando éramos jovens. (morar)",
+          "options": [
+            "morábamos",
+            "morei",
+            "morávamos"
+          ],
+          "answer": 2,
+          "explain": ""
+        },
+        {
+          "q": "3. Antigamente, a cidade ______ muito menor. (ser)",
+          "options": [
+            "foi",
+            "era",
+            "seria"
+          ],
+          "answer": 1,
+          "explain": ""
+        },
+        {
+          "q": "4. Meus avós ______ uma fazenda no interior. (ter)",
+          "options": [
+            "tinham",
+            "teniam",
+            "tiveram"
+          ],
+          "answer": 0,
+          "explain": ""
+        },
+        {
+          "q": "5. Qual frase expressa um hábito no passado?",
+          "options": [
+            "Ontem eu viajei para Salvador.",
+            "Todos os domingos, nós íamos à casa da nossa avó.",
+            "Eu geralmente  tomo café da manhã no trabalho."
+          ],
+          "answer": 1,
+          "explain": ""
+        },
+        {
+          "q": "6. Ela sempre ______ as chaves na mesa antes de sair. (pôr)",
+          "options": [
+            "ponhava",
+            "ponia",
+            "punha"
+          ],
+          "answer": 2,
+          "explain": ""
+        },
+        {
+          "q": "Qual frase tem um erro de escrita na conjugação do verbo?",
+          "options": [
+            "Eu iba à escola de metrô",
+            "Eu falava com ele todos os dias",
+            "Você era muito feliz"
+          ],
+          "answer": 0,
+          "explain": ""
+        },
+        {
+          "q": "Naquela época, eu ______ para a escola de ônibus. (vir)",
+          "options": [
+            "vim",
+            "venia",
+            "vinha"
+          ],
+          "answer": 2,
+          "explain": ""
+        },
+        {
+          "q": "Nós não ___________ (ser) amigos porque não __________ (ter) muitas coisas em comum .",
+          "options": [
+            "eramos - teniamos",
+            "éramos - tínhamos",
+            "éramos -  teníamos"
+          ],
+          "answer": 1,
+          "explain": ""
+        },
+        {
+          "q": "Marque a frase onde o pretérito imperfeito está correto.",
+          "options": [
+            "Você vinha todos os dias por esse caminho?",
+            "Nós íbamos ao parque todos os domingos.",
+            "Ela ponía música sempre que limpava a casa."
+          ],
+          "answer": 0,
+          "explain": ""
+        }
+      ]
+    },
+    {
+      "title": "futuro do subjuntivo x infinitivo pessoal",
+      "subject": "",
+      "level": "B2",
+      "description": "Saber a diferença dessas formas verbais",
+      "questions": [
+        {
+          "q": "Marque a opção onde  há verbo no infinitivo pessoal.",
+          "options": [
+            "Quando chegarmos à empresa, começaremos a reunião.",
+            "Para mantiver um corpo bonito, é necessário fazer exercícios",
+            "É importante que todos colaborem.",
+            "Apesar de não termos ido, contribuímos com a equipe."
+          ],
+          "answer": 3,
+          "explain": ""
+        },
+        {
+          "q": "Que oração condicional está construída corretamente.",
+          "options": [
+            "Se temos tempo, iremos ao evento.",
+            "Se tivermos tempo, iremos ao evento.",
+            "Se tivéssemos tempo, iremos ao evento.",
+            "Se tivermos tempo, iríamos ao evento."
+          ],
+          "answer": 1,
+          "explain": ""
+        }
+      ]
+    }
+  ]
+}

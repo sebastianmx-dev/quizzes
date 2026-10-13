@@ -1,0 +1,76 @@
+rules_version = '2';
+
+// Regras de segurança do Caderno de Quizzes.
+// - Alunos entram sem conta (login anónimo): jogam, entram em jogos ao vivo e respondem.
+// - Gestores entram com Google; um email é gestor se existir o documento admins/<email>.
+// - As respostas certas dos jogos ao vivo (gamekeys) só são visíveis para gestores.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email_verified == true
+        && exists(/databases/$(database)/documents/admins/$(request.auth.token.email));
+    }
+    function validName(d) { return d.name is string && d.name.size() > 0 && d.name.size() <= 16; }
+
+    match /admins/{email} {
+      allow read: if signedIn() && request.auth.token.email == email;
+      allow write: if false;
+    }
+
+    match /config/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /scores/{scoreId} {
+        allow read: if true;
+        allow create: if signedIn()
+          && validName(request.resource.data)
+          && request.resource.data.score is int
+          && request.resource.data.score >= 0
+          && request.resource.data.score <= 1000000;
+        allow update: if false;
+        allow delete: if isAdmin();
+      }
+    }
+
+    match /gamekeys/{pin} {
+      allow read, write: if isAdmin();
+    }
+
+    match /games/{pin} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+
+      match /players/{uid} {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.auth.uid == uid && validName(request.resource.data);
+        allow delete: if isAdmin();
+      }
+
+      match /answers/{answerId} {
+        allow read, delete: if isAdmin();
+        allow create: if signedIn()
+          && request.resource.data.pid == request.auth.uid
+          && request.resource.data.q is int
+          && answerId == string(request.resource.data.q) + '-' + request.auth.uid
+          && get(/databases/$(database)/documents/games/$(pin)).data.status == 'question'
+          && get(/databases/$(database)/documents/games/$(pin)).data.i == request.resource.data.q;
+        allow update: if false;
+      }
+
+      match /scores/{uid} {
+        allow read: if signedIn();
+        allow write: if isAdmin();
+      }
+    }
+  }
+}
