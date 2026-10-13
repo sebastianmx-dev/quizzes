@@ -1,9 +1,9 @@
 rules_version = '2';
 
 // Regras de segurança do Caderno de Quizzes.
-// - Alunos entram sem conta (login anónimo): jogam, entram em jogos ao vivo e respondem.
+// - Alunos entram sem conta (login anônimo): jogam, entram em jogos ao vivo e respondem.
 // - Gestores entram com Google; um email é gestor se existir o documento admins/<email>.
-// - As respostas certas dos jogos ao vivo (gamekeys) só são visíveis para gestores.
+// - As respostas certas dos jogos ao vivo (gamekeys) só ficam visíveis para gestores.
 service cloud.firestore {
   match /databases/{database}/documents {
 

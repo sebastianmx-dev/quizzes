@@ -4,7 +4,7 @@
       "title": "Futuro em português",
       "subject": "Português",
       "level": "A2–B1",
-      "description": "Futuro simples, futuro perifrástico, verbos irregulares, mesóclise, futuro composto e conjuntivo futuro.",
+      "description": "Futuro do presente simples e composto, futuro perifrástico, verbos irregulares, mesóclise e futuro do subjuntivo.",
       "timeLimit": 20,
       "questions": [
         {
@@ -27,10 +27,10 @@
             "comiam"
           ],
           "answer": 1,
-          "explain": "Na 3.ª pessoa do plural, o futuro simples acrescenta -ão ao infinitivo: comer + ão = comerão."
+          "explain": "Na 3ª pessoa do plural, o futuro simples acrescenta -ão ao infinitivo: comer + ão = comerão."
         },
         {
-          "q": "Logo à noite, eu ___ estudar para o exame.",
+          "q": "Hoje à noite, eu ___ estudar para o exame.",
           "options": [
             "fui",
             "iria",
@@ -41,7 +41,7 @@
           "explain": "O futuro perifrástico usa o verbo ir no presente mais o infinitivo: vou estudar. É a forma mais comum na fala para um futuro próximo."
         },
         {
-          "q": "Qual é o futuro simples de “fazer” na 1.ª pessoa do singular?",
+          "q": "Qual é o futuro simples de “fazer” na 1ª pessoa do singular?",
           "options": [
             "farei",
             "fazerei",
@@ -60,10 +60,10 @@
             "Eu parti amanhã cedo."
           ],
           "answer": 2,
-          "explain": "Só “partirei” é futuro simples. “Parto amanhã” é presente com valor de futuro, algo comum na conversa."
+          "explain": "Só “partirei” é futuro simples. “Parto amanhã” é presente com valor de futuro, algo comum no dia a dia."
         },
         {
-          "q": "Qual é a forma correta de “dar-lhe o livro”, no futuro simples e em registo formal? ___ amanhã o livro.",
+          "q": "Qual é a forma correta de “dar-lhe o livro”, no futuro simples e em registro formal? ___ amanhã o livro.",
           "options": [
             "Lhe darei",
             "Dar-lhe-ei",
@@ -71,7 +71,7 @@
             "Dar-lhei"
           ],
           "answer": 1,
-          "explain": "No futuro simples, o pronome pode ficar no meio do verbo (mesóclise): dar-lhe-ei. Depois de “não” ou “já”, o pronome vem antes: “Não lhe darei”.",
+          "explain": "No futuro simples, o pronome pode ficar no meio do verbo (mesóclise): dar-lhe-ei. Depois de “não” ou “já”, o pronome vem antes: “Não lhe darei”. No Brasil, a mesóclise aparece sobretudo na escrita formal.",
           "time": 30
         },
         {
@@ -94,7 +94,7 @@
             "tiver"
           ],
           "answer": 3,
-          "explain": "Depois de “se” e “quando” com sentido de futuro usa-se o conjuntivo futuro: se eu tiver, quando eu chegar."
+          "explain": "Depois de “se” e “quando” com sentido de futuro usa-se o futuro do subjuntivo: se eu tiver, quando eu chegar."
         },
         {
           "q": "Quando eu ___ grande, vou ser astronauta. (ser)",
@@ -105,7 +105,7 @@
             "serei"
           ],
           "answer": 0,
-          "explain": "O conjuntivo futuro de ser e de ir é “for”: quando eu for, quando tu fores, quando nós formos."
+          "explain": "O futuro do subjuntivo de ser e de ir é “for”: quando eu for, quando tu fores, quando nós formos."
         },
         {
           "q": "— Onde está o João? — ___ em casa.",

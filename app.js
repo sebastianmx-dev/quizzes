@@ -7,8 +7,8 @@ var CIRC=2*Math.PI*26;
 var SET_DEFAULT={defaultTime:20,maxPoints:1000,minPct:50,streakStep:100,streakCap:500,countdown:true,showExplain:true,leaderboard:true,boardSize:10,sfx:true,music:true};
 var SET_OPTS={
   maxPoints:[[500,'500'],[1000,'1000'],[2000,'2000']],
-  minPct:[[100,'100% (sem prémio de rapidez)'],[75,'75%'],[50,'50%'],[25,'25%'],[0,'0%']],
-  streakStep:[[0,'Sem bónus'],[50,'+50 por acerto seguido'],[100,'+100 por acerto seguido'],[200,'+200 por acerto seguido']],
+  minPct:[[100,'100% (sem prêmio de rapidez)'],[75,'75%'],[50,'50%'],[25,'25%'],[0,'0%']],
+  streakStep:[[0,'Sem bônus'],[50,'+50 por acerto seguido'],[100,'+100 por acerto seguido'],[200,'+200 por acerto seguido']],
   streakCap:[[200,'200'],[500,'500'],[1000,'1000']],
   boardSize:[[5,'5 lugares'],[10,'10 lugares'],[20,'20 lugares']]
 };
@@ -116,7 +116,7 @@ var AV={
   hc:['#2B1D14','#6B3E1F','#D9A441','#B5462C','#E6E6E6','#3A63D8','#D94F9A'],
   shirt:['#FFFFFF','#1A2238','#F2B200','#2FA36B','#E2574C','#5B7BE0']
 };
-var AV_PARTS=[['bg','Fundo',8],['skin','Pele',6],['hair','Cabelo',6],['hc','Cor do cabelo',7],['eyes','Olhos',4],['mouth','Boca',5],['acc','Acessório',6],['shirt','Camisola',6]];
+var AV_PARTS=[['bg','Fundo',8],['skin','Pele',6],['hair','Cabelo',6],['hc','Cor do cabelo',7],['eyes','Olhos',4],['mouth','Boca',5],['acc','Acessório',6],['shirt','Camiseta',6]];
 var AV_PRESETS=['1-0-1-0-0-0-0-0','4-2-3-0-1-1-0-1','2-1-2-3-3-0-1-3','0-3-4-0-1-4-2-1','5-4-5-1-0-0-0-2','3-0-2-2-2-1-3-4',
   '6-2-0-0-1-2-4-5','7-1-1-4-3-3-1-0','1-3-3-0-0-1-5-4','4-5-4-5-3-4-0-3','2-4-2-6-1-0-3-1','0-0-5-3-2-1-0-5'];
 var avN=0;
@@ -347,10 +347,10 @@ function viewLibrary(){
     h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Quizzes',visible.length?h('span',{class:'count'},visible.length):null),
     h('div',{class:'qa'},
       S.canWrite?h('button',{class:'btn primary',onclick:function(){openEditor(null)}},'Novo quiz'):null,
-      S.canWrite?h('button',{class:'btn',onclick:function(){S.setDraft=null;S.adminMsg='';S.adminConfirm=null;go('admin')}},'Gestão'):null,
+      S.canWrite?h('button',{class:'btn',onclick:function(){S.setDraft=null;S.adminMsg='';S.adminConfirm=null;S.seedState=null;go('admin')}},'Gestão'):null,
       S.db?h('button',{class:'btn','aria-expanded':String(S.toolsOpen),onclick:function(){S.toolsOpen=!S.toolsOpen;render()}},'Importar / exportar'):null)));
   if(S.hostResume) root.append(h('div',{class:'panel live-banner'},
-    h('div',null,h('strong',null,'Tens um jogo ao vivo em curso'),h('div',{class:'muted'},(S.hostResume.title||'Quiz')+' · PIN '+fmtPin(S.hostResume.pin))),
+    h('div',null,h('strong',null,'Você tem um jogo ao vivo em andamento'),h('div',{class:'muted'},(S.hostResume.title||'Quiz')+' · PIN '+fmtPin(S.hostResume.pin))),
     h('div',{class:'qa'},
       h('button',{class:'btn primary',onclick:function(){Snd.init();hostResume()}},'Retomar'),
       h('button',{class:'btn',onclick:async function(){
@@ -362,25 +362,25 @@ function viewLibrary(){
     var pinErr=h('p',{class:'msg bad',id:'pin-err',role:'alert'});
     var doJoin=function(){
       var d=(pinIn.value||'').replace(/\D/g,'');
-      if(d.length!==6){pinErr.textContent='O PIN tem 6 algarismos.';pinIn.focus();return}
+      if(d.length!==6){pinErr.textContent='O PIN tem 6 dígitos.';pinIn.focus();return}
       S.joinPin='';Snd.init();playerOpen(d);
     };
     pinIn.addEventListener('input',function(){S.joinPin=pinIn.value;pinErr.textContent=''});
     pinIn.addEventListener('keydown',function(e){if(e.key==='Enter')doJoin()});
     root.append(h('div',{class:'panel joinbox'},
-      h('label',{class:'lbl',for:'join-pin',style:'margin:0'},'Entrar num jogo ao vivo'),
+      h('label',{class:'lbl',for:'join-pin',style:'margin:0'},'Entrar em um jogo ao vivo'),
       h('div',{class:'joinrow'},pinIn,h('button',{class:'btn primary',onclick:doJoin},'Entrar')),
       pinErr));
   }
   if(S.libMsg) root.append(h('p',{class:'msg bad',role:'alert'},S.libMsg));
   if(S.toolsOpen) root.append(toolsPanel());
-  if(!S.loaded) root.append(h('p',{class:'empty'},'A carregar os quizzes…'));
+  if(!S.loaded) root.append(h('p',{class:'empty'},'Carregando os quizzes…'));
   else if(S.failed) root.append(h('div',{class:'empty'},
-    h('strong',null,S.setupMissing?'Este site ainda não está ligado a uma base de dados.':'Não consegui ligar à base de dados.'),
-    S.setupMissing?'Preenche o ficheiro firebase-config.js seguindo o guia do README.':'Verifica a ligação à internet e recarrega a página.'+(S.failMsg?' ('+S.failMsg+')':'')));
-  else if(!visible.length) root.append(h('div',{class:'empty'},h('strong',null,'Ainda não há quizzes visíveis.'),S.canWrite?(hiddenN?'Há '+plural(hiddenN,'quiz oculto','quizzes ocultos')+'. Mostra-os em “Gestão”.':'Cria o primeiro em “Novo quiz” ou importa um JSON.'):'Quando alguém acrescentar quizzes, aparecem aqui.'));
+    h('strong',null,S.setupMissing?'Este site ainda não está conectado a um banco de dados.':'Não consegui conectar ao banco de dados.'),
+    S.setupMissing?'Preencha o arquivo firebase-config.js seguindo o guia do README.':'Verifique sua conexão com a internet e recarregue a página.'+(S.failMsg?' ('+S.failMsg+')':'')));
+  else if(!visible.length) root.append(h('div',{class:'empty'},h('strong',null,'Ainda não há quizzes visíveis.'),S.canWrite?(hiddenN?'Há '+plural(hiddenN,'quiz oculto','quizzes ocultos')+'. Mostre-os em “Gestão”.':'Crie o primeiro em “Novo quiz” ou importe um JSON.'):'Quando alguém adicionar quizzes, eles aparecem aqui.'));
   else root.append(h('ul',{class:'list'},visible.map(quizRow)));
-  if(S.canWrite&&hiddenN&&visible.length) root.append(h('p',{class:'muted'},plural(hiddenN,'quiz oculto','quizzes ocultos')+' dos jogadores. Gere a visibilidade em “Gestão”.'));
+  if(S.canWrite&&hiddenN&&visible.length) root.append(h('p',{class:'muted'},plural(hiddenN,'quiz oculto','quizzes ocultos')+' dos jogadores. Gerencie a visibilidade em “Gestão”.'));
   if(S.canWrite&&S.loaded&&!S.failed&&!S.quizzes.length) root.append(h('div',null,h('button',{class:'btn primary',id:'seed-btn',onclick:loadSeed},'Carregar quizzes iniciais')));
   if(S.auth) root.append(accountRow());
   return root;
@@ -394,9 +394,10 @@ function accountRow(){
   return row;
 }
 function loadSeed(){
-  var b=document.getElementById('seed-btn');if(b){b.disabled=true;b.textContent='A carregar…'}
+  var b=document.getElementById('seed-btn');if(b){b.disabled=true;b.textContent='Carregando…'}
   fetch('data/quizzes.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(function(t){
-    S.toolsOpen=true;S.toolsText=t;render();doImport();
+    S.toolsOpen=true;S.toolsText=t;render();
+    doImport().then(function(){if(!S.toolsBad){S.toolsOpen=false;render()}});
   }).catch(function(e){S.libMsg='Não consegui ler os quizzes iniciais: '+e.message;render()});
 }
 function quizRow(q){
@@ -414,7 +415,7 @@ function quizRow(q){
     h('div',{class:'qa'},
       h('button',{class:'btn primary',disabled:!n,onclick:function(){startPlay(q)}},'Jogar'),
       S.canHost?h('button',{class:'btn',disabled:!n,onclick:function(e){
-        var b=e.currentTarget;b.disabled=true;b.textContent='A preparar…';
+        var b=e.currentTarget;b.disabled=true;b.textContent='Preparando…';
         Snd.init();
         hostCreate(q).catch(function(err){S.libMsg='Não foi possível iniciar o jogo ao vivo: '+(err&&err.message||'erro desconhecido');render()});
       }},'Ao vivo'):null,
@@ -444,7 +445,7 @@ function toolsPanel(){
       h('button',{class:'btn',onclick:function(){
         if(!ta.value) return setToolsMsg('Não há nada para copiar.',true);
         var ok=function(){setToolsMsg('Copiado.',false)};
-        var fail=function(){ta.focus();ta.select();setToolsMsg('Seleciona o texto e copia com o teclado.',true)};
+        var fail=function(){ta.focus();ta.select();setToolsMsg('Selecione o texto e copie com o teclado.',true)};
         try{navigator.clipboard.writeText(ta.value).then(ok,fail)}catch(e){fail()}
       }},'Copiar'),
       S.canWrite?h('button',{class:'btn primary',id:'tools-import',onclick:doImport},'Importar'):null),
@@ -507,7 +508,7 @@ function startPlay(quiz){
     if(S.play!==p||p.phase!=='lobby') return;
     p.board=b;
     var el=document.getElementById('lobby-board');
-    if(el) el.replaceChildren(boardList(b,null,5,'Ainda ninguém jogou. Sê o primeiro na tabela.'));
+    if(el) el.replaceChildren(boardList(b,null,5,'Ninguém jogou ainda. Seja o primeiro na tabela.'));
   });
 }
 async function loadBoard(id){
@@ -574,7 +575,7 @@ function gameBar(p,withCounter){
     withCounter?h('span',{class:'chip'},(p.i+1)+' / '+p.qs.length):null,
     h('span',{class:'gtitle'},p.quiz.title||''),
     h('div',{class:'gactions'},p.phase==='lobby'?null:h('span',{class:'gav'},avSvg(S.avatar,36)),p.phase==='lobby'?null:score,toggleBtn('sfx'),toggleBtn('music'),exit),
-    p.confirmExit?confirmRow('Sair agora? Perdes o progresso deste jogo.','Sair',leave,function(){p.confirmExit=false;render()}):null);
+    p.confirmExit?confirmRow('Sair agora? Você vai perder o progresso deste jogo.','Sair',leave,function(){p.confirmExit=false;render()}):null);
 }
 function confirmRow(text,yesLabel,onYes,onNo){
   return h('div',{class:'confirm',role:'alert'},
@@ -607,21 +608,21 @@ function viewLobby(p){
         h('span',null,plural(p.nq,'pergunta','perguntas')),
         h('span',null,timeLabel(tl)),
         p.quiz.level?h('span',null,'Nível '+p.quiz.level):null)),
-    h('p',null,(tl>0&&cfg('minPct')<100?'Responde depressa: acertar nos primeiros segundos vale até '+fmt(cfg('maxPoints'))+' pontos.':'Cada resposta certa vale '+fmt(cfg('maxPoints'))+' pontos.')+(cfg('streakStep')>0?' Acertar seguido dá bónus.':'')),
+    h('p',null,(tl>0&&cfg('minPct')<100?'Responda rápido: acertar nos primeiros segundos vale até '+fmt(cfg('maxPoints'))+' pontos.':'Cada resposta certa vale '+fmt(cfg('maxPoints'))+' pontos.')+(cfg('streakStep')>0?' Acertar seguido dá bônus.':'')),
     h('div',{class:'ident'},
       h('div',{class:'ident-av'},avSvg(S.avatar,88)),
       h('div',{class:'ident-main'},
-        h('label',{class:'lbl',for:'nick',style:'margin:0'},'O teu nome na tabela'),nick,
+        h('label',{class:'lbl',for:'nick',style:'margin:0'},'Seu nome na tabela'),nick,
         h('div',null,h('button',{class:'btn sm',id:'av-toggle','aria-expanded':String(!!p.pickOpen),onclick:function(){p.pickOpen=!p.pickOpen;rerenderKeepScroll()}},p.pickOpen?'Fechar avatares':'Escolher avatar')))),
     p.pickOpen?avatarPicker():null,
     h('div',{class:'stack',style:'gap:10px'},
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-sfx',checked:Snd.sfx,onchange:function(e){Snd.sfx=e.target.checked;store.set('cq:sfx',Snd.sfx?'1':'0');Snd.init();if(Snd.sfx)Snd.click()}}),'Efeitos sonoros'),
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-music',checked:Snd.music,onchange:function(e){Snd.music=e.target.checked;store.set('cq:music',Snd.music?'1':'0')}}),'Música durante as perguntas'),
-      h('label',{class:'check'},h('input',{type:'checkbox',id:'o-shuffle',checked:S.shuffle,onchange:function(e){S.shuffle=e.target.checked;store.set('cq:shuffle',S.shuffle?'1':'0')}}),'Misturar perguntas e opções')),
+      h('label',{class:'check'},h('input',{type:'checkbox',id:'o-shuffle',checked:S.shuffle,onchange:function(e){S.shuffle=e.target.checked;store.set('cq:shuffle',S.shuffle?'1':'0')}}),'Embaralhar perguntas e opções')),
     h('div',null,h('button',{class:'btn go big',onclick:beginGame},'Começar'))));
   if(cfg('leaderboard')) root.append(h('div',{class:'gcard'},
     h('h3',{class:'lbl',style:'margin:0'},'Melhores pontuações'),
-    h('div',{id:'lobby-board'},p.board?boardList(p.board,null,5,'Ainda ninguém jogou. Sê o primeiro na tabela.'):h('p',{class:'muted'},'A carregar a tabela…'))));
+    h('div',{id:'lobby-board'},p.board?boardList(p.board,null,5,'Ninguém jogou ainda. Seja o primeiro na tabela.'):h('p',{class:'muted'},'Carregando a tabela…'))));
   return root;
 }
 function beginGame(){
@@ -650,7 +651,7 @@ function viewCountdown(p){
     h('div',{class:'cdown',role:'status'},
       h('div',{class:'s'},p.quiz.title||''),
       h('div',{class:'n'},String(p.count)),
-      h('div',{class:'t'},'Prepara-te!')));
+      h('div',{class:'t'},'Prepare-se!')));
 }
 function beginQuestion(){
   var p=S.play;
@@ -756,12 +757,12 @@ function viewReveal(p){
     h('div',{class:'head'},ok?'Certo!':(p.picked<0?'Tempo esgotado':'Não foi essa.')),
     ok?h('div',{class:'gain'},'+'+fmt(p.gain)):null,
     ok&&q.double?h('div',{class:'note'},'Pontos a dobrar aplicados.'):null,
-    ok&&p.bonus?h('div',{class:'streak'},icon('flame',20),'Sequência de '+p.streak+': +'+p.bonus+' de bónus'):null,
-    ok&&!p.bonus&&p.streak===1?h('div',{class:'note'},'Acerta a seguinte para começar uma sequência.'):null,
+    ok&&p.bonus?h('div',{class:'streak'},icon('flame',20),'Sequência de '+p.streak+': +'+p.bonus+' de bônus'):null,
+    ok&&!p.bonus&&p.streak===1?h('div',{class:'note'},'Acerte a próxima para começar uma sequência.'):null,
     ok?null:h('div',null,'Resposta certa: ',h('b',null,correctOf(q))),
-    !ok&&p.prevStreak>=2?h('div',{class:'note'},'Perdeste a sequência de '+p.prevStreak+'.'):null,
+    !ok&&p.prevStreak>=2?h('div',{class:'note'},'Você perdeu a sequência de '+p.prevStreak+'.'):null,
     q.explain&&cfg('showExplain')?h('div',{class:'expl'},q.explain):null,
-    h('div',{class:'footbar'},h('button',{class:'btn primary big',id:'next-btn',onclick:next},last?'Ver resultado':'Seguinte'))));
+    h('div',{class:'footbar'},h('button',{class:'btn primary big',id:'next-btn',onclick:next},last?'Ver resultado':'Próxima'))));
   return root;
 }
 function next(){
@@ -805,13 +806,13 @@ async function saveScore(p){
   }
   if(S.play===p&&p.phase==='done') render();
 }
-function ordinal(n){return n+'.º'}
+function ordinal(n){return n+'º'}
 function viewDone(p){
   var n=p.qs.length, acc=Math.round(p.correct/n*100);
   var avg=p.times.length?p.times.reduce(function(a,b){return a+b},0)/p.times.length/1000:0;
   var root=h('div',{class:'game stack'});
   root.append(gameBar(p,false));
-  var rankText=p.rank?'Ficaste em '+ordinal(p.rank)+' lugar'+(p.saved?'':' (pontuação não registada)'):'';
+  var rankText=p.rank?'Você ficou em '+ordinal(p.rank)+' lugar'+(p.saved?'':' (pontuação não registrada)'):'';
   root.append(h('div',{class:'gcard'},
     h('h2',{class:'final','data-focus':'',tabindex:'-1'},
       avSvg(S.avatar,96),
@@ -819,7 +820,7 @@ function viewDone(p){
       h('span',{class:'big-score'},fmt(p.score)),
       h('span',{class:'muted'},'pontos'),
       rankText?h('span',{class:'rank'},rankText):null),
-    !p.saved&&p.saved!==null?h('p',{class:'muted',style:'text-align:center'},'A tua pontuação não foi registada na tabela. Verifica a ligação à internet.'):null));
+    !p.saved&&p.saved!==null?h('p',{class:'muted',style:'text-align:center'},'Sua pontuação não foi registrada na tabela. Verifique sua conexão com a internet.'):null));
   root.append(h('div',{class:'stats'},
     h('div',{class:'stat'},h('b',null,p.correct+'/'+n),h('span',null,'Certas')),
     h('div',{class:'stat'},h('b',null,acc+'%'),h('span',null,'Precisão')),
@@ -827,13 +828,13 @@ function viewDone(p){
     h('div',{class:'stat'},h('b',null,String(p.bestStreak)),h('span',null,'Maior sequência'))));
   if(cfg('leaderboard')) root.append(h('div',{class:'gcard'},
     h('h3',{class:'lbl',style:'margin:0'},'Tabela do quiz'),
-    p.board===null&&p.saved===null?h('p',{class:'muted'},'A carregar a tabela…'):tableBlock(p)));
+    p.board===null&&p.saved===null?h('p',{class:'muted'},'Carregando a tabela…'):tableBlock(p)));
   if(p.misses.length){
     root.append(h('h3',{class:'sec-title'},plural(p.misses.length,'erro para rever','erros para rever')));
     root.append(h('ul',{class:'list'},p.misses.map(function(m){
       return h('li',{class:'miss'},
         h('div',{class:'q'},qText(m.q,true)),
-        h('div',{class:'row bad'},m.chosen===null?'Sem resposta (tempo esgotado)':['Escolheste: ',h('b',null,m.chosen)]),
+        h('div',{class:'row bad'},m.chosen===null?'Sem resposta (tempo esgotado)':['Você escolheu: ',h('b',null,m.chosen)]),
         h('div',{class:'row ok'},'Resposta certa: ',h('b',null,correctOf(m.q))),
         m.q.explain?h('div',{class:'row'},m.q.explain):null);
     })));
@@ -846,7 +847,7 @@ function viewDone(p){
 function tableBlock(p){
   var b=p.board;
   if(!b) return h('p',{class:'muted'},'Não foi possível carregar a tabela.');
-  if(!b.length) return h('p',{class:'muted'},'Ainda não há pontuações registadas.');
+  if(!b.length) return h('p',{class:'muted'},'Ainda não há pontuações registradas.');
   return podiumBlock(b,p.myId);
 }
 function podiumBlock(b,myId){
@@ -948,10 +949,10 @@ function qEditor(q,qi){
   });
   return h('div',{class:'qedit'},
     head,
-    field('Texto da pergunta (usa ___ para cada lacuna)','q'+qi+'-text',q,'q',{area:true,rows:2,max:400,ph:'Amanhã eu ___ (falar) com o professor.'}),
-    h('p',{class:'muted',style:'margin-top:-6px'},'Com duas ou mais lacunas, separa as partes da resposta com “ - ”, por exemplo: éramos - tínhamos.'),
+    field('Texto da pergunta (use ___ para cada lacuna)','q'+qi+'-text',q,'q',{area:true,rows:2,max:400,ph:'Amanhã eu ___ (falar) com o professor.'}),
+    h('p',{class:'muted',style:'margin-top:-6px'},'Com duas ou mais lacunas, separe as partes da resposta com “ - ”, por exemplo: éramos - tínhamos.'),
     h('div',{role:'radiogroup','aria-label':'Opções da pergunta '+(qi+1)},
-      h('span',{class:'lbl opts-label'},'Opções (marca a certa)'),
+      h('span',{class:'lbl opts-label'},'Opções (marque a certa)'),
       rows,
       h('div',{class:'qa'},
         q.options.length<6?h('button',{class:'btn sm',onclick:function(){
@@ -964,7 +965,7 @@ function qEditor(q,qi){
     h('div',{class:'grid2'},
       selectField('Tempo desta pergunta','q'+qi+'-time',q.time==null?'':q.time,[['','Padrão do quiz']].concat(TIMES),function(v){q.time=v===''?null:+v}),
       h('label',{class:'check'},h('input',{type:'checkbox',id:'q'+qi+'-dbl',checked:q.double===true,onchange:function(e){q.double=e.target.checked}}),'Pontos a dobrar (×2)')),
-    field('Explicação (aparece depois de responder)','q'+qi+'-explain',q,'explain',{area:true,rows:2,max:600,ph:'Porque é que esta é a resposta certa.'}));
+    field('Explicação (aparece depois de responder)','q'+qi+'-explain',q,'explain',{area:true,rows:2,max:600,ph:'Por que esta é a resposta certa.'}));
 }
 function setEditorErr(t){var el=document.getElementById('editor-err');if(el)el.textContent=t||''}
 function viewEditor(){
@@ -986,16 +987,16 @@ function viewEditor(){
   }},'Adicionar pergunta')));
   root.append(h('p',{id:'editor-err',class:'msg bad',role:'alert'}));
   var foot=h('div',{class:'footbar'},
-    h('button',{class:'btn primary',id:'save-btn',onclick:saveDraft},'Guardar quiz'),
+    h('button',{class:'btn primary',id:'save-btn',onclick:saveDraft},'Salvar quiz'),
     h('button',{class:'btn',onclick:function(){go('library')}},'Cancelar'),
     h('span',{class:'grow'}));
   if(S.draftId){
     if(S.confirmDelete){
-      foot.append(h('span',{class:'muted'},'Apagar o quiz e as suas pontuações?'),
-        h('button',{class:'btn danger',onclick:deleteQuiz},'Sim, apagar'),
+      foot.append(h('span',{class:'muted'},'Excluir o quiz e as pontuações dele?'),
+        h('button',{class:'btn danger',onclick:deleteQuiz},'Sim, excluir'),
         h('button',{class:'btn',onclick:function(){S.confirmDelete=false;render()}},'Não'));
     }else{
-      foot.append(h('button',{class:'btn danger',onclick:function(){S.confirmDelete=true;render()}},'Apagar quiz'));
+      foot.append(h('button',{class:'btn danger',onclick:function(){S.confirmDelete=true;render()}},'Excluir quiz'));
     }
   }
   root.append(foot);
@@ -1004,12 +1005,12 @@ function viewEditor(){
 async function saveDraft(){
   if(S.saving) return;
   var d=S.draft;
-  if(!d.title.trim()) return setEditorErr('Dá um título ao quiz.');
-  if(!d.questions.length) return setEditorErr('Acrescenta pelo menos uma pergunta.');
+  if(!d.title.trim()) return setEditorErr('Dê um título ao quiz.');
+  if(!d.questions.length) return setEditorErr('Adicione pelo menos uma pergunta.');
   for(var i=0;i<d.questions.length;i++){
     var q=d.questions[i];
-    if(!q.q.trim()) return setEditorErr('Escreve o texto da pergunta '+(i+1)+'.');
-    if(q.options.some(function(o){return !o.trim()})) return setEditorErr('Preenche ou remove as opções vazias da pergunta '+(i+1)+'.');
+    if(!q.q.trim()) return setEditorErr('Escreva o texto da pergunta '+(i+1)+'.');
+    if(q.options.some(function(o){return !o.trim()})) return setEditorErr('Preencha ou remova as opções vazias da pergunta '+(i+1)+'.');
   }
   var r=normalize(d);
   if(!r.ok) return setEditorErr(r.error);
@@ -1025,7 +1026,7 @@ async function saveDraft(){
   }catch(e){
     S.saving=false;
     if(btn)btn.disabled=false;
-    setEditorErr('Não foi possível guardar: '+(e&&e.message||'erro desconhecido'));
+    setEditorErr('Não foi possível salvar: '+(e&&e.message||'erro desconhecido'));
   }
 }
 async function deleteQuiz(){
@@ -1038,7 +1039,7 @@ async function deleteQuiz(){
     S.confirmDelete=false;go('library');
   }catch(e){
     S.confirmDelete=false;render();
-    setEditorErr('Não foi possível apagar: '+(e&&e.message||'erro desconhecido'));
+    setEditorErr('Não foi possível excluir: '+(e&&e.message||'erro desconhecido'));
   }
 }
 
@@ -1298,18 +1299,18 @@ function hostLobby(H){
   var url=joinUrl(H.pin);
   var urlField=h('input',{id:'join-url',class:'in mono-in',type:'text',readonly:true,value:url,'aria-label':'Link do jogo'});
   var copyMsg=h('span',{class:'muted',role:'status',id:'copy-msg'});
-  var qrNode=H.qr?H.qr.cloneNode(true):h('div',{class:'qr-fallback'},H.qrFailed?'Não consegui gerar o QR. Usa o link ou o PIN.':'A gerar o QR…');
+  var qrNode=H.qr?H.qr.cloneNode(true):h('div',{class:'qr-fallback'},H.qrFailed?'Não consegui gerar o QR. Use o link ou o PIN.':'Gerando o QR…');
   var root=h('div',{class:'game stack'});
   root.append(liveBar(h('span',{class:'chip'},'Ao vivo'),H.title,hostExitNode(H)));
   root.append(h('div',{class:'hl'},
     h('section',{class:'gcard joincard','aria-labelledby':'join-h'},
-      h('h2',{class:'lbl',id:'join-h',style:'margin:0',tabindex:'-1','data-focus':''},'Entra no jogo'),
+      h('h2',{class:'lbl',id:'join-h',style:'margin:0',tabindex:'-1','data-focus':''},'Entre no jogo'),
       h('div',{class:'pinbox'},h('span',{class:'pinlbl'},'PIN do jogo'),h('span',{class:'pinbig'},fmtPin(H.pin))),
       h('div',{class:'qrbox'},qrNode),
-      h('p',{class:'muted'},'Aponta a câmara do telemóvel ao QR. No computador, abre a página e escreve o PIN em “Entrar num jogo ao vivo”.'),
+      h('p',{class:'muted'},'Aponte a câmera do celular para o QR. No computador, abra a página e digite o PIN em “Entrar em um jogo ao vivo”.'),
       h('div',{class:'copyrow'},urlField,h('button',{class:'btn sm',onclick:function(){
         var ok=function(){copyMsg.textContent='Link copiado.'};
-        var fail=function(){urlField.focus();urlField.select();copyMsg.textContent='Seleciona o link e copia com o teclado.'};
+        var fail=function(){urlField.focus();urlField.select();copyMsg.textContent='Selecione o link e copie com o teclado.'};
         try{navigator.clipboard.writeText(url).then(ok,fail)}catch(e){fail()}
       }},'Copiar')),
       copyMsg),
@@ -1317,7 +1318,7 @@ function hostLobby(H){
       h('div',{class:'bar'},h('h2',{class:'lbl',id:'pl-h',style:'margin:0'},'Jogadores'),h('span',{class:'count'},String(list.length))),
       list.length
         ?h('ul',{class:'plist'},list.map(function(pl){return h('li',{class:'pchip'},avSvg(avOf(pl),40),h('span',null,pl.name||'Jogador'))}))
-        :h('p',{class:'waiting'},'À espera de jogadores…'),
+        :h('p',{class:'waiting'},'Esperando jogadores…'),
       h('div',{class:'footbar'},
         h('button',{class:'btn go big',disabled:!list.length||H.busy,onclick:hostNextQuestion},'Começar'),
         h('span',{class:'muted'},plural(H.qs.length,'pergunta','perguntas'))))));
@@ -1396,7 +1397,7 @@ function playerOpen(pin){
     scores:{},lastQ:-1,arrive:0,choice:null,sent:false,timeUp:false,busy:false,err:'',soundFor:-1};
   S.join=J;
   go('player');
-  if(!S.db||!S.myId){J.loaded=true;J.err='Não consegui ligar ao servidor do jogo. Verifica a ligação e recarrega a página.';render();return}
+  if(!S.db||!S.myId){J.loaded=true;J.err='Não consegui conectar ao servidor do jogo. Verifique sua conexão e recarregue a página.';render();return}
   sub(S.db.doc('games/'+pin).onSnapshot(function(s){
     if(S.join!==J) return;
     J.loaded=true;
@@ -1413,7 +1414,7 @@ function playerOpen(pin){
     if(g.status==='ended') Snd.finale(1);
     playerSound();
     render();window.scrollTo(0,0);
-  },function(){J.loaded=true;J.err='Perdi a ligação ao jogo. Recarrega a página.';playerPaint()}));
+  },function(){J.loaded=true;J.err='A conexão com o jogo caiu. Recarregue a página.';playerPaint()}));
   S.db.doc('games/'+pin+'/players/'+S.myId).get().then(function(s){
     if(S.join!==J||!s.exists) return;
     J.joined=true;J.name=s.data().name||J.name;
@@ -1454,7 +1455,7 @@ async function playerJoin(){
     playerScores();
     var g=J.game;
     if(g&&g.status==='question'&&g.i===J.lastQ&&!J.sent){cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(playerLoop)}
-  }catch(e){J.err='Não consegui entrar no jogo. Verifica a ligação e tenta outra vez.'}
+  }catch(e){J.err='Não consegui entrar no jogo. Verifique sua conexão e tente de novo.'}
   J.busy=false;render();window.scrollTo(0,0);
 }
 async function playerAnswer(i){
@@ -1465,7 +1466,7 @@ async function playerAnswer(i){
   try{
     await S.db.doc('games/'+J.pin+'/answers/'+qi+'-'+S.myId).set({q:qi,pid:S.myId,choice:i,ms:ms,at:new Date().toISOString()});
   }catch(e){
-    if(J.game&&J.game.i===qi&&J.game.status==='question'){J.sent=false;J.choice=null;J.err='A resposta não foi enviada. Tenta outra vez.';render()}
+    if(J.game&&J.game.i===qi&&J.game.status==='question'){J.sent=false;J.choice=null;J.err='A resposta não foi enviada. Tente de novo.';render()}
   }
 }
 function playerLoop(){
@@ -1496,11 +1497,11 @@ function viewPlayer(){
   S.refs.root=root;
   root.append(liveBar(chips,g?g.title:'',exit,[avChip,scoreChip]));
   if(J.err) root.append(h('p',{class:'live-err',role:'alert'},J.err));
-  if(!J.loaded){root.append(h('div',{class:'gcard'},h('p',{'data-focus':'',tabindex:'-1'},'A procurar o jogo '+fmtPin(J.pin)+'…')));return root}
+  if(!J.loaded){root.append(h('div',{class:'gcard'},h('p',{'data-focus':'',tabindex:'-1'},'Procurando o jogo '+fmtPin(J.pin)+'…')));return root}
   if(J.missing||!g){
     root.append(h('div',{class:'gcard'},
       h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Jogo não encontrado'),
-      h('p',null,'Não há nenhum jogo com o PIN '+fmtPin(J.pin)+'. Confirma o número no ecrã do anfitrião.'),
+      h('p',null,'Não há nenhum jogo com o PIN '+fmtPin(J.pin)+'. Confira o número na tela do anfitrião.'),
       h('div',null,h('button',{class:'btn primary',onclick:playerLeave},'Voltar'))));
     return root;
   }
@@ -1519,18 +1520,18 @@ function viewPlayer(){
       h('div',{class:'ident'},
         h('div',{class:'ident-av'},avSvg(S.avatar,88)),
         h('div',{class:'ident-main'},
-          h('label',{class:'lbl',for:'jnick',style:'margin:0'},'O teu nome'),nick,
+          h('label',{class:'lbl',for:'jnick',style:'margin:0'},'Seu nome'),nick,
           h('div',null,h('button',{class:'btn sm',id:'jav-toggle','aria-expanded':String(J.pickOpen),onclick:function(){J.pickOpen=!J.pickOpen;rerenderKeepScroll()}},J.pickOpen?'Fechar avatares':'Escolher avatar')))),
       J.pickOpen?avatarPicker():null,
-      h('div',null,h('button',{class:'btn go big',disabled:J.busy,onclick:playerJoin},J.busy?'A entrar…':'Entrar no jogo'))));
+      h('div',null,h('button',{class:'btn go big',disabled:J.busy,onclick:playerJoin},J.busy?'Entrando…':'Entrar no jogo'))));
     return root;
   }
   var list=ranked(J.scores), rank=rankOf(list,S.myId);
   if(g.status==='lobby'){
     root.append(h('div',{class:'gcard center'},
       avSvg(S.avatar,112),
-      h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Estás dentro, '+(J.name||'Jogador')+'!'),
-      h('p',null,'Vê o teu nome no ecrã do anfitrião. O jogo começa já a seguir.')));
+      h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Você entrou, '+(J.name||'Jogador')+'!'),
+      h('p',null,'Veja seu nome na tela do anfitrião. O jogo já vai começar.')));
     return root;
   }
   if(g.status==='question'&&g.q){
@@ -1538,7 +1539,7 @@ function viewPlayer(){
       root.append(h('div',{class:'gcard center',role:'status'},
         J.sent?h('span',{class:'shapeb big',style:tileStyle(J.choice)},shape(J.choice)):null,
         h('h2',{class:'h2',tabindex:'-1','data-focus':''},J.sent?'Resposta enviada':'Tempo esgotado'),
-        h('p',{class:'muted'},'Aguarda pelos outros jogadores…')));
+        h('p',{class:'muted'},'Aguarde os outros jogadores…')));
       return root;
     }
     if((g.q.limit||0)>0){var fill=h('i');S.refs.bar=fill;root.append(h('div',{class:'tbar'},fill))}
@@ -1558,19 +1559,19 @@ function viewPlayer(){
     var correctText=g.q&&g.q.options?g.q.options[rv.correct]:'';
     var ok=last?last.ok:false;
     root.append(h('div',{class:'reveal '+(last?(ok?'ok':'bad'):''),role:'status'},
-      h('div',{class:'head',tabindex:'-1','data-focus':''},!last?'A calcular…':ok?'Certo!':(last.choice<0?'Sem resposta':'Não foi essa.')),
+      h('div',{class:'head',tabindex:'-1','data-focus':''},!last?'Calculando…':ok?'Certo!':(last.choice<0?'Sem resposta':'Não foi essa.')),
       last&&ok?h('div',{class:'gain'},'+'+fmt(last.points)):null,
-      last&&ok&&last.bonus?h('div',{class:'streak'},icon('flame',20),'Sequência de '+me.streak+': +'+last.bonus+' de bónus'):null,
+      last&&ok&&last.bonus?h('div',{class:'streak'},icon('flame',20),'Sequência de '+me.streak+': +'+last.bonus+' de bônus'):null,
       last&&!ok?h('div',null,'Resposta certa: ',h('b',null,correctText)):null,
       rv.explain?h('div',{class:'expl'},rv.explain):null,
-      rank?h('div',{class:'note'},'Estás em '+rank+'.º lugar com '+fmt(me.score||0)+' pontos.'):null));
+      rank?h('div',{class:'note'},'Você está em '+rank+'º lugar com '+fmt(me.score||0)+' pontos.'):null));
     return root;
   }
   if(g.status==='board'){
     root.append(h('div',{class:'gcard'},
-      h('h2',{class:'h2',tabindex:'-1','data-focus':''},rank?'Estás em '+rank+'.º lugar':'Classificação'),
+      h('h2',{class:'h2',tabindex:'-1','data-focus':''},rank?'Você está em '+rank+'º lugar':'Classificação'),
       list.length?playerRows(list,S.myId,5,true):null,
-      rank&&rank>5?h('p',{class:'muted'},'Tens '+fmt(me.score||0)+' pontos.'):null));
+      rank&&rank>5?h('p',{class:'muted'},'Você tem '+fmt(me.score||0)+' pontos.'):null));
     return root;
   }
   root.append(h('div',{class:'gcard'},
@@ -1579,7 +1580,7 @@ function viewPlayer(){
       h('span',{class:'who'},J.name||'Jogador'),
       h('span',{class:'big-score'},fmt(me&&me.score||0)),
       h('span',{class:'muted'},'pontos'),
-      rank?h('span',{class:'rank'},'Ficaste em '+rank+'.º lugar'+(g.cancelled?' (jogo interrompido)':'')):null),
+      rank?h('span',{class:'rank'},'Você ficou em '+rank+'º lugar'+(g.cancelled?' (jogo interrompido)':'')):null),
     list.length?podiumBlock(list,S.myId):null));
   root.append(h('div',{class:'footbar'},h('button',{class:'btn wh big',onclick:playerLeave},'Biblioteca')));
   return root;
@@ -1595,7 +1596,7 @@ async function adminDo(fn,okText){
   if(S.adminBusy) return;
   S.adminBusy=true;
   try{await fn();setAdminMsg(okText,false)}
-  catch(e){setAdminMsg('Não foi possível guardar: '+(e&&e.message||'erro desconhecido'),true)}
+  catch(e){setAdminMsg('Não foi possível salvar: '+(e&&e.message||'erro desconhecido'),true)}
   finally{S.adminBusy=false}
 }
 function numSelect(label,id,obj,key,opts){
@@ -1625,26 +1626,26 @@ function viewAdmin(){
       numSelect('Tempo padrão por pergunta','s-time',d,'defaultTime',TIMES.filter(function(t){return t[0]>0})),
       numSelect('Pontos por resposta certa','s-max',d,'maxPoints',SET_OPTS.maxPoints),
       numSelect('Pontos no último segundo','s-min',d,'minPct',SET_OPTS.minPct),
-      numSelect('Bónus de sequência','s-step',d,'streakStep',SET_OPTS.streakStep),
-      numSelect('Bónus máximo','s-cap',d,'streakCap',SET_OPTS.streakCap),
+      numSelect('Bônus de sequência','s-step',d,'streakStep',SET_OPTS.streakStep),
+      numSelect('Bônus máximo','s-cap',d,'streakCap',SET_OPTS.streakCap),
       numSelect('Tamanho da tabela','s-board',d,'boardSize',SET_OPTS.boardSize)),
     ex,
     h('div',{class:'checks'},
       boolCheck('Contagem 3-2-1 antes da primeira pergunta','s-cd',d,'countdown'),
       boolCheck('Mostrar a explicação depois de responder','s-expl',d,'showExplain'),
       boolCheck('Tabela de pontuações','s-lb',d,'leaderboard'),
-      boolCheck('Efeitos sonoros ligados por defeito','s-sfx',d,'sfx'),
-      boolCheck('Música ligada por defeito','s-music',d,'music')),
-    h('p',{class:'muted'},'O tempo padrão vale para os quizzes marcados com “Padrão”. Som e música são o ponto de partida: cada jogador pode mudar no seu aparelho.'),
+      boolCheck('Efeitos sonoros ligados por padrão','s-sfx',d,'sfx'),
+      boolCheck('Música ligada por padrão','s-music',d,'music')),
+    h('p',{class:'muted'},'O tempo padrão vale para os quizzes marcados com “Padrão”. Som e música são o ponto de partida: cada jogador pode mudar no próprio aparelho.'),
     h('div',{class:'qa'},
       h('button',{class:'btn primary',onclick:function(){
         var clean=sanitizeSettings(d);
-        adminDo(function(){return S.db.doc('config/settings').set(clean)},'Regras guardadas.');
-      }},'Guardar regras'),
+        adminDo(function(){return S.db.doc('config/settings').set(clean)},'Regras salvas.');
+      }},'Salvar regras'),
       h('button',{class:'btn',onclick:function(){
         S.setDraft=Object.assign({},SET_DEFAULT);render();
-        setAdminMsg('Valores padrão repostos. Carrega em “Guardar regras” para aplicar.',false);
-      }},'Repor padrão')));
+        setAdminMsg('Valores padrão restaurados. Clique em “Salvar regras” para aplicar.',false);
+      }},'Restaurar padrão')));
   rules.addEventListener('change',refreshEx);
   root.append(rules);
 
@@ -1652,14 +1653,15 @@ function viewAdmin(){
   root.append(h('section',{class:'panel stack','aria-labelledby':'quiz-h'},
     h('h3',{class:'lbl',id:'quiz-h',style:'margin:0'},'Quizzes'),
     S.quizzes.length?h('ul',{class:'alist'},rows):h('p',{class:'muted'},'Ainda não há quizzes.')));
+  root.append(seedSection());
   root.append(h('section',{class:'panel stack','aria-labelledby':'live-h'},
     h('h3',{class:'lbl',id:'live-h',style:'margin:0'},'Jogos ao vivo'),
-    h('p',{class:'muted'},'Cada jogo ao vivo guarda jogadores, respostas e pontos. Apaga os jogos terminados de vez em quando para manter a página leve.'),
+    h('p',{class:'muted'},'Cada jogo ao vivo armazena jogadores, respostas e pontos. Exclua os jogos encerrados de vez em quando para manter a página leve.'),
     h('div',null,h('button',{class:'btn',onclick:function(){
-      adminDo(async function(){var n=await cleanGames();S.adminCleanN=n},'Jogos terminados apagados.').then(function(){
-        if(S.adminCleanN!=null) setAdminMsg(S.adminCleanN?plural(S.adminCleanN,'jogo terminado apagado.','jogos terminados apagados.'):'Não havia jogos terminados.',false);
+      adminDo(async function(){var n=await cleanGames();S.adminCleanN=n},'Jogos encerrados excluídos.').then(function(){
+        if(S.adminCleanN!=null) setAdminMsg(S.adminCleanN?plural(S.adminCleanN,'jogo encerrado excluído.','jogos encerrados excluídos.'):'Não havia jogos encerrados.',false);
       });
-    }},'Apagar jogos terminados'))));
+    }},'Excluir jogos encerrados'))));
   return root;
 }
 function adminRow(q,idx){
@@ -1694,7 +1696,7 @@ function adminRow(q,idx){
         adminDo(function(){return ref.update({questions:qs,updatedAt:new Date().toISOString()})},'Todas as perguntas de “'+q.title+'” usam agora o tempo do quiz.');
       }},'Mesmo tempo em todas'):null,
       confirming
-        ?[h('span',{class:'muted'},'Apagar todas as pontuações?'),
+        ?[h('span',{class:'muted'},'Excluir todas as pontuações?'),
           h('button',{class:'btn danger sm',onclick:function(){S.adminConfirm=null;adminDo(function(){return clearScores(q.id)},'Tabela de “'+q.title+'” limpa.').then(render)}},'Sim, limpar'),
           h('button',{class:'btn sm',onclick:function(){S.adminConfirm=null;render()}},'Não')]
         :h('button',{class:'btn sm',onclick:function(){S.adminConfirm=q.id;render()}},'Limpar tabela')));
@@ -1704,6 +1706,56 @@ async function moveQuiz(idx,d){
   for(var i=0;i<list.length;i++){
     if(list[i].order!==i+1) await S.db.doc('quizzes/'+list[i].id).update({order:i+1});
   }
+}
+/* ---------- quizzes iniciais: comparar e atualizar ---------- */
+function quizSig(q){
+  var p=plain(q);
+  return JSON.stringify([p.title,p.subject,p.level,p.description,p.timeLimit,p.questions]);
+}
+function normTitle(t){return String(t||'').trim().toLowerCase()}
+function loadSeedCompare(){
+  S.seedState='loading';render();
+  fetch('data/quizzes.json',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(raw){
+    var list=Array.isArray(raw)?raw:(raw&&raw.quizzes)||[];
+    S.seedRaw=list.map(normalize).filter(function(r){return r.ok}).map(function(r){return r.quiz});
+    S.seedState='ready';rerenderKeepScroll();
+  }).catch(function(e){S.seedState='error';S.seedErr=e.message;rerenderKeepScroll()});
+}
+function seedSection(){
+  var sec=h('section',{class:'panel stack','aria-labelledby':'seed-h'},
+    h('h3',{class:'lbl',id:'seed-h',style:'margin:0'},'Quizzes iniciais'),
+    h('p',{class:'muted'},'Compara os quizzes do site com a versão mais recente publicada no GitHub. Substituir troca o conteúdo do quiz e mantém a tabela de pontuações.'));
+  if(S.seedState!=='ready'){
+    sec.append(h('div',null,h('button',{class:'btn',disabled:S.seedState==='loading',onclick:loadSeedCompare},S.seedState==='loading'?'Comparando…':'Comparar')));
+    if(S.seedState==='error') sec.append(h('p',{class:'msg bad'},'Não consegui ler os quizzes iniciais: '+S.seedErr));
+    return sec;
+  }
+  sec.append(h('ul',{class:'alist'},S.seedRaw.map(function(sq){
+    var match=S.quizzes.filter(function(q){return normTitle(q.title)===normTitle(sq.title)})[0];
+    var same=match&&quizSig(match)===quizSig(sq);
+    var status=!match?'Não está no site':same?'Atualizado':'Há uma versão mais recente';
+    var btn=null;
+    if(!match) btn=h('button',{class:'btn sm primary',onclick:function(){
+      var now=new Date().toISOString();
+      adminDo(function(){return S.db.collection('quizzes').doc().set(Object.assign({},sq,{order:nextOrder(),createdAt:now,updatedAt:now}))},'“'+sq.title+'” adicionado.');
+    }},'Adicionar');
+    else if(!same) btn=S.adminConfirm==='seed-'+match.id
+      ?[h('span',{class:'muted'},'Substituir o conteúdo atual?'),
+        h('button',{class:'btn sm danger',onclick:function(){
+          S.adminConfirm=null;
+          var now=new Date().toISOString();
+          var data=Object.assign({},sq,{order:match.order!=null?match.order:nextOrder(),createdAt:match.createdAt||now,updatedAt:now});
+          if(match.hidden) data.hidden=true;
+          adminDo(function(){return S.db.doc('quizzes/'+match.id).set(data)},'“'+sq.title+'” atualizado.');
+        }},'Sim, substituir'),
+        h('button',{class:'btn sm',onclick:function(){S.adminConfirm=null;render()}},'Não')]
+      :h('button',{class:'btn sm',onclick:function(){S.adminConfirm='seed-'+match.id;render()}},'Substituir');
+    return h('li',{class:'arow'},
+      h('div',{class:'ahead'},h('div',{class:'atitle'},h('strong',null,sq.title),h('span',{class:'pill'},status)),
+        h('span',{class:'muted'},plural(sq.questions.length,'pergunta','perguntas'))),
+      btn?h('div',{class:'qa'},btn):null);
+  })));
+  return sec;
 }
 async function cleanGames(){
   var snap=await S.db.collection('games').where('status','==','ended').limit(100).get();

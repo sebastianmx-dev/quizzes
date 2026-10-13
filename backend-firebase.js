@@ -1,4 +1,4 @@
-// Liga a app ao Firebase: Firestore para os dados, login anónimo para alunos e Google para gestores.
+// Liga a app ao Firebase: Firestore para os dados, login anônimo para alunos e Google para gestores.
 // Expõe window.QBackend = { db, auth } com a mesma forma que app.js usa.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -78,7 +78,7 @@ function start() {
     if (!u) {
       try { await signInAnonymously(auth); }
       catch (e) {
-        state = { uid: null, email: null, isAdmin: false, error: "o login anónimo não está ativo no Firebase (" + (e.code || e.message) + ")." };
+        state = { uid: null, email: null, isAdmin: false, error: "o login anônimo não está ativado no Firebase (" + (e.code || e.message) + ")." };
         ready(); emit();
       }
       return;
