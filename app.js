@@ -146,6 +146,14 @@ var AV_PRESETS=[
   '1-4-3-0-1-1-0-2','6-4-6-0-3-0-0-3','3-4-7-0-0-1-3-1','5-4-2-0-1-4-1-0','2-4-5-0-1-1-0-5','5-4-8-3-0-0-0-4'
 ];
 var avN=0;
+// Crianças: proporções infantis (cabeça maior), equilibradas por tom de pele; detalhes extra: laço (6), boné (7), curativo (8), dente de leite (boca 5).
+var KID_PRESETS=[
+  'k1-0-5-2-3-5-6-5','k3-0-1-3-3-0-7-4','k6-0-4-0-1-1-8-1','k5-0-2-1-3-1-0-3',
+  'k0-1-6-1-3-0-0-5','k4-1-1-0-3-5-1-2','k7-1-2-0-0-1-6-0',
+  'k2-2-3-0-3-5-0-5','k5-2-8-6-3-0-0-2','k1-2-7-0-1-1-7-3','k6-2-1-1-3-1-2-1',
+  'k6-3-3-0-3-1-6-5','k0-3-1-0-3-5-8-2','k3-3-5-0-0-0-1-4',
+  'k4-4-3-0-3-5-0-3','k2-4-6-0-3-1-6-0','k5-4-7-0-1-1-7-2','k7-4-2-0-3-0-1-5'
+];
 var ANIMALS=['Gato','Cachorro','Panda','Raposa','Coelho','Urso','Sapo','Coruja','Pinguim','Leão','Coala','Tigre'];
 var ANIMAL_PRESETS=['a0-1-0','a1-7-0','a2-3-0','a3-5-0','a4-0-0','a5-2-5','a6-6-0','a7-4-0','a8-2-0','a9-4-4','a10-3-1','a11-1-2'];
 function accSvg(i){
@@ -154,7 +162,10 @@ function accSvg(i){
     '<g fill="#111"><rect x="20.5" y="29.5" width="10" height="7" rx="3"/><rect x="33.5" y="29.5" width="10" height="7" rx="3"/></g><path d="M30.5 32H33.5" stroke="#111" stroke-width="1.6"/>',
     '<path d="M15 34C15 17 49 17 49 34" fill="none" stroke="#24242C" stroke-width="3"/><rect x="12" y="29" width="6.5" height="11" rx="2.5" fill="#24242C"/><rect x="45.5" y="29" width="6.5" height="11" rx="2.5" fill="#24242C"/>',
     '<path d="M21 19L23 8L28 14L32 6L36 14L41 8L43 19Z" fill="#F2B200" stroke="#A97A00" stroke-width="1.2" stroke-linejoin="round"/>',
-    '<path d="M16 28C16 13 48 13 48 28Z" fill="#C9303F"/><rect x="15" y="24" width="34" height="7" rx="3.5" fill="#F3F0EA"/><circle cx="32" cy="11" r="4.2" fill="#F3F0EA"/>'][i]||'';
+    '<path d="M16 28C16 13 48 13 48 28Z" fill="#C9303F"/><rect x="15" y="24" width="34" height="7" rx="3.5" fill="#F3F0EA"/><circle cx="32" cy="11" r="4.2" fill="#F3F0EA"/>',
+    '<g fill="#FF6FA5"><path d="M41 17l-6.5-4.2v8.4z"/><path d="M41 17l6.5-4.2v8.4z"/></g><circle cx="41" cy="17" r="2.2" fill="#E2457F"/>',
+    '<path d="M16.5 28C16.5 15.5 47.5 15.5 47.5 28Z" fill="#1F5BD8"/><path d="M31 27.5C24 26 18 26.5 10 29C18 31 25 30.5 32 29.5Z" fill="#143F9C"/><circle cx="32" cy="16.8" r="1.6" fill="#143F9C"/>',
+    '<g transform="rotate(-25 42 39)"><rect x="37.5" y="37" width="9" height="4" rx="2" fill="#F2C9A0"/><rect x="40.5" y="37" width="3" height="4" fill="#E5B184"/></g>'][i]||'';
 }
 function animalSvg(a,size){
   var cid='avc'+(++avN), D='#1B1410';
@@ -257,12 +268,20 @@ function avParse(s){
   s=String(s||'');
   var am=/^a(\d+)-(\d+)-(\d+)$/.exec(s);
   if(am){var k=+am[1],b=+am[2],c=+am[3];return {type:'animal',kind:k<ANIMALS.length?k:0,bg:b<AV.bg.length?b:0,acc:c<6?c:0}}
+  var kid=s.charAt(0)==='k';
+  if(kid) s=s.slice(1);
   var parts=s.split('-'), a={};
-  AV_PARTS.forEach(function(p,i){var n=parseInt(parts[i],10);a[p[0]]=(n>=0&&n<p[2])?n:0});
+  AV_PARTS.forEach(function(p,i){
+    var max=p[2];
+    if(kid&&p[0]==='mouth') max=6;
+    if(kid&&p[0]==='acc') max=9;
+    var n=parseInt(parts[i],10);a[p[0]]=(n>=0&&n<max)?n:0;
+  });
+  if(kid) a.kid=true;
   return a;
 }
-function avStr(a){if(a&&a.type==='animal')return 'a'+a.kind+'-'+a.bg+'-'+a.acc;return AV_PARTS.map(function(p){return a[p[0]]}).join('-')}
-function allPresets(){return AV_PRESETS.concat(ANIMAL_PRESETS)}
+function avStr(a){if(a&&a.type==='animal')return 'a'+a.kind+'-'+a.bg+'-'+a.acc;return (a&&a.kid?'k':'')+AV_PARTS.map(function(p){return a[p[0]]}).join('-')}
+function allPresets(){return AV_PRESETS.concat(KID_PRESETS,ANIMAL_PRESETS)}
 function avRandom(){
   var all=allPresets();
   return avParse(all[Math.floor(Math.random()*all.length)]);
@@ -280,9 +299,11 @@ function avSvg(a,size){
   m+='<svg class="av" viewBox="0 0 64 64" width="'+size+'" height="'+size+'" aria-hidden="true">';
   m+='<defs><clipPath id="'+cid+'"><circle cx="32" cy="32" r="32"/></clipPath></defs><g clip-path="url(#'+cid+')">';
   m+='<rect width="64" height="64" fill="'+AV.bg[a.bg]+'"/>';
-  if(a.hair===2) m+='<path d="M15 30C15 16 24 12 32 12S49 16 49 30L50 50H41V30H23V50H14Z" fill="'+hc+'"/>';
-  m+='<path d="M8 66C8 51 19 46 32 46S56 51 56 66Z" fill="'+AV.shirt[a.shirt]+'"/>';
-  m+='<rect x="28" y="40" width="8" height="8" fill="'+sk+'"/>';
+  var kid=!!a.kid, HS=kid?'<g transform="translate(32 44) scale(1.13) translate(-32 -44)">':'', HE=kid?'</g>':'';
+  if(a.hair===2) m+=HS+'<path d="M15 30C15 16 24 12 32 12S49 16 49 30L50 50H41V30H23V50H14Z" fill="'+hc+'"/>'+HE;
+  m+=kid?'<path d="M13 66C13 53 22 48 32 48S51 53 51 66Z" fill="'+AV.shirt[a.shirt]+'"/>':'<path d="M8 66C8 51 19 46 32 46S56 51 56 66Z" fill="'+AV.shirt[a.shirt]+'"/>';
+  m+=HS;
+  m+='<rect x="28" y="40" width="8" height="'+(kid?10:8)+'" fill="'+sk+'"/>';
   m+='<circle cx="17.5" cy="34" r="3.6" fill="'+sk+'"/><circle cx="46.5" cy="34" r="3.6" fill="'+sk+'"/>';
   if(a.hair===6){var br='';for(var by=30;by<=55;by+=5)br+='<circle cx="16" cy="'+by+'" r="3.4"/><circle cx="48" cy="'+by+'" r="3.4"/>';m+='<g fill="'+hc+'">'+br+'</g>'}
   if(a.hair===8) m+='<path d="M13.5 36C13.5 15 23 9.5 32 9.5S50.5 15 50.5 36V50C46 54 40 55.5 32 55.5S18 54 13.5 50Z" fill="'+hc+'"/>';
@@ -296,7 +317,7 @@ function avSvg(a,size){
     '<path d="M17.6 30C18 20.5 24 17.6 32 17.6S46 20.5 46.4 30C43 26.2 38 24.6 32 24.6S21 26.2 17.6 30Z" opacity=".9"/>',
     '<path d="M16.5 31C16.5 18.5 24 14 32 14S47.5 18.5 47.5 31C44 24.5 38.5 22 32 22S20 24.5 16.5 31Z"/>'][a.hair];
   if(hair) m+='<g fill="'+hc+'">'+hair+'</g>';
-  m+='<circle cx="23" cy="38.5" r="2.4" fill="#E2576B" opacity=".3"/><circle cx="41" cy="38.5" r="2.4" fill="#E2576B" opacity=".3"/>';
+  m+='<circle cx="23" cy="38.5" r="2.4" fill="#E2576B" opacity="'+(kid?'.45':'.3')+'"/><circle cx="41" cy="38.5" r="2.4" fill="#E2576B" opacity="'+(kid?'.45':'.3')+'"/>';
   var arcL='<path d="M23.5 34Q26 30.5 28.5 34" fill="none" stroke="'+D+'" stroke-width="1.8" stroke-linecap="round"/>';
   var arcR='<path d="M35.5 34Q38 30.5 40.5 34" fill="none" stroke="'+D+'" stroke-width="1.8" stroke-linecap="round"/>';
   var dotL='<circle cx="26" cy="33" r="2" fill="'+D+'"/>', dotR='<circle cx="38" cy="33" r="2" fill="'+D+'"/>';
@@ -307,9 +328,10 @@ function avSvg(a,size){
     grin,
     '<path d="M28 40.5H36" stroke="'+D+'" stroke-width="1.8" stroke-linecap="round"/>',
     '<ellipse cx="32" cy="41" rx="2.4" ry="3" fill="#5A1F1F"/>',
-    grin+'<ellipse cx="32" cy="42.6" rx="3" ry="1.9" fill="#E8798A"/>'][a.mouth];
+    grin+'<ellipse cx="32" cy="42.6" rx="3" ry="1.9" fill="#E8798A"/>',
+    grin+'<rect x="28.6" y="38.5" width="2.9" height="2.6" rx=".6" fill="#fff"/><rect x="32.5" y="38.5" width="2.9" height="2.6" rx=".6" fill="#fff"/>'][a.mouth];
   m+=accSvg(a.acc);
-  m+='</g></svg>';
+  m+=HE+'</g></svg>';
   return tpl(m);
 }
 function setAvatar(a){
@@ -336,6 +358,8 @@ function avatarPicker(){
       }},'Aleatório')),
     h('span',{class:'av-sec'},'Pessoas'),
     grid(AV_PRESETS,'avp-','Pessoa'),
+    h('span',{class:'av-sec'},'Crianças'),
+    grid(KID_PRESETS,'avk-','Criança'),
     h('span',{class:'av-sec'},'Animais'),
     grid(ANIMAL_PRESETS,'ava-','Animal',animalNames));
 }
