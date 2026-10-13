@@ -1456,7 +1456,7 @@ function podiumBlock(b,myId,owner){
   wrap.append(h('div',{class:'podium'+(animate?' anim':'')},order.map(function(i){
     var e=top[i];
     return h('div',{class:'pod p'+(i+1)+(e.id===p.myId?' me':'')},
-      avSvg(avOf(e),i===0?60:48),
+      e.teamIdx!=null?teamBadge(e.teamIdx,i===0?60:48):avSvg(avOf(e),i===0?60:48),
       h('span',{class:'nm'},e.name||'Jogador'),
       h('span',{class:'pt'},fmt(e.score||0)),
       h('div',{class:'blk'},String(i+1)));
@@ -1716,6 +1716,97 @@ function playerRows(list,myId,max,showLast){
 }
 function rankOf(list,id){var i=list.findIndex(function(e){return e.id===id});return i<0?null:i+1}
 
+/* ---------- ao vivo: equipes ---------- */
+var TEAMS=['Vermelha','Azul','Amarela','Verde','Roxa','Turquesa'];
+function teamName(i){return 'Equipe '+(TEAMS[i]||String(i+1))}
+function teamBadge(i,size){
+  size=size||28;
+  var b=h('span',{class:'teamb',style:tileStyle(i)+';width:'+size+'px;height:'+size+'px','aria-hidden':'true'});
+  b.append(shape(i));
+  return b;
+}
+function validTeamCount(n){n=parseInt(n,10);return n>=2&&n<=6?n:2}
+function hostTeamSync(H,force){
+  if(!H.teamMode) return;
+  var n=H.teamCount, counts=[], next={}, changed=!!force;
+  for(var t=0;t<n;t++) counts.push(0);
+  var pids=Object.keys(H.players).sort(function(a,b){return String(H.players[a].at||'').localeCompare(String(H.players[b].at||''))});
+  pids.forEach(function(pid){
+    var want=H.teamAssign==='choose'?H.players[pid].team:undefined;
+    var cur=H.teamOf[pid];
+    var t=Number.isInteger(want)&&want>=0&&want<n?want:(Number.isInteger(cur)&&cur>=0&&cur<n?cur:-1);
+    if(t>=0){next[pid]=t;counts[t]++}
+  });
+  pids.forEach(function(pid){
+    if(pid in next) return;
+    var t=counts.indexOf(Math.min.apply(null,counts));
+    next[pid]=t;counts[t]++;
+  });
+  if(!changed) changed=JSON.stringify(next)!==JSON.stringify(H.teamOf);
+  H.teamOf=next;
+  if(changed) hostSet({teamOf:next}).catch(function(){});
+}
+function hostTeamShuffle(H){
+  var pids=shuffle(Object.keys(H.players)), next={};
+  pids.forEach(function(pid,i){next[pid]=i%H.teamCount});
+  H.teamOf=next;
+  hostSet({teamOf:next}).catch(function(){});
+  Snd.whoosh();render();
+}
+function hostTeamSettings(H,patch){
+  Object.assign(H,patch);
+  H.teamCount=validTeamCount(H.teamCount);
+  hostSet({teamMode:!!H.teamMode,teamCount:H.teamCount,teamAssign:H.teamAssign}).catch(function(){});
+  if(H.teamMode) hostTeamSync(H,true);
+  rerenderKeepScroll();
+}
+function teamBoardOf(scores,teamOf,n){
+  var t=[];
+  for(var i=0;i<n;i++) t.push({id:'t'+i,teamIdx:i,name:teamName(i),sum:0,members:0,correct:0});
+  Object.keys(teamOf||{}).forEach(function(pid){
+    var ti=teamOf[pid];if(!t[ti]) return;
+    var sc=scores[pid]||{};
+    t[ti].members++;t[ti].sum+=(sc.score||0);t[ti].correct+=(sc.correct||0);
+  });
+  t.forEach(function(x){x.score=x.members?Math.round(x.sum/x.members):0;x.avgCorrect=x.members?Math.round(x.correct/x.members*10)/10:0});
+  return t.sort(function(a,b){return b.score-a.score||b.members-a.members||a.teamIdx-b.teamIdx});
+}
+function teamRows(board,myTeam){
+  var max=Math.max.apply(null,[1].concat(board.map(function(x){return x.score})));
+  return h('ol',{class:'tboard'},board.map(function(x,i){
+    return h('li',{class:x.teamIdx===myTeam?'me':null,style:tileStyle(x.teamIdx)},
+      h('span',{class:'rk'},String(i+1)),
+      teamBadge(x.teamIdx,30),
+      h('div',{class:'tinfo'},
+        h('span',{class:'nm'},x.name),
+        h('span',{class:'muted'},plural(x.members,'integrante','integrantes')),
+        h('div',{class:'tbar2','aria-hidden':'true'},h('i',{style:'width:'+Math.round(x.score/max*100)+'%'}))),
+      h('span',{class:'pt'},fmt(x.score)));
+  }));
+}
+function teamLobbyGroups(H,list){
+  var groups=[];
+  for(var i=0;i<H.teamCount;i++) groups.push([]);
+  list.forEach(function(pl){var t=H.teamOf[pl.id];if(groups[t])groups[t].push(pl)});
+  return h('div',{class:'tgroups'},groups.map(function(g,i){
+    return h('div',{class:'tgroup',style:tileStyle(i)},
+      h('div',{class:'thead'},teamBadge(i,26),h('strong',null,teamName(i)),h('span',{class:'count'},String(g.length))),
+      g.length?h('ul',{class:'plist'},g.map(function(pl){return h('li',{class:'pchip'},avSvg(avOf(pl),32),h('span',null,pl.name||'Jogador'))}))
+        :h('p',{class:'muted',style:'margin:0'},'Ninguém ainda'));
+  }));
+}
+function teamControls(H){
+  var box=h('div',{class:'stack',style:'gap:10px'},
+    selectField('Modo de jogo','live-mode',H.teamMode?'teams':'solo',[['solo','Individual'],['teams','Equipes']],function(v){hostTeamSettings(H,{teamMode:v==='teams'})}));
+  if(H.teamMode){
+    box.append(h('div',{class:'grid2'},
+      selectField('Número de equipes','live-teams',H.teamCount,[[2,'2 equipes'],[3,'3 equipes'],[4,'4 equipes'],[5,'5 equipes'],[6,'6 equipes']],function(v){hostTeamSettings(H,{teamCount:+v})}),
+      selectField('Como formar','live-assign',H.teamAssign,[['auto','Distribuir automaticamente'],['choose','Os alunos escolhem']],function(v){hostTeamSettings(H,{teamAssign:v})})));
+    box.append(h('p',{class:'muted',style:'margin:0'},'A pontuação de cada equipe é a média dos pontos dos integrantes, para que equipes maiores não tenham vantagem.'));
+  }
+  return box;
+}
+
 /* ---------- ao vivo: anfitrião ---------- */
 function validTimeMode(v){
   if(v==='default'||v==='quiz') return v;
@@ -1775,7 +1866,8 @@ function hostOpen(pin,qs,game){
   liveStop();
   var H={pin:pin,qs:qs,title:game.title||'Quiz',status:game.status,i:typeof game.i==='number'?game.i:-1,
     players:{},scores:{},answers:{},reveal:game.reveal||null,t0:0,limitMs:0,curLimit:0,busy:false,qr:null,qrFailed:false,confirmExit:false,err:'',ansUnsub:null,
-    timeMode:validTimeMode(game.timeMode)};
+    timeMode:validTimeMode(game.timeMode),teamMode:game.teamMode===true,teamCount:validTeamCount(game.teamCount),teamAssign:game.teamAssign==='choose'?'choose':'auto',
+    teamOf:game.teamOf&&typeof game.teamOf==='object'?Object.assign({},game.teamOf):{}};
   S.host=H;
   go('host');
   sub(S.db.collection('games/'+pin+'/players').onSnapshot(function(snap){
@@ -1783,6 +1875,7 @@ function hostOpen(pin,qs,game){
     var o={};snap.docs.forEach(function(d){if(d.exists)o[d.id]=d.data()});
     var grew=Object.keys(o).length>Object.keys(H.players).length;
     H.players=o;
+    if(H.teamMode) hostTeamSync(H,false);
     if(H.status==='lobby'){if(grew)Snd.click();hostPaint()}
     else if(H.status==='question') hostCheckAll();
   },function(){}));
@@ -1866,7 +1959,7 @@ async function hostReveal(){
     if(choice>=0) counts[choice]++;
     var ok=choice===q.answer, streak=ok?(prev.streak||0)+1:0;
     var pts=ok?pointsFor(Math.max(0,+a.ms||0),H.curLimit,q.double,streak,a&&a.hint===true):{total:0,bonus:0};
-    var doc={name:String(pl.name||'Jogador').slice(0,16),avatar:typeof pl.avatar==='string'?pl.avatar.slice(0,40):'',
+    var doc={name:String(pl.name||'Jogador').slice(0,16),avatar:typeof pl.avatar==='string'?pl.avatar.slice(0,40):'',team:H.teamMode&&Number.isInteger(H.teamOf[pid])?H.teamOf[pid]:null,
       score:(prev.score||0)+pts.total,streak:streak,correct:(prev.correct||0)+(ok?1:0),
       last:{i:H.i,ok:ok,points:pts.total,bonus:pts.bonus,choice:choice}};
     H.scores[pid]=doc;
@@ -1879,7 +1972,8 @@ async function hostReveal(){
     hints:Object.keys(H.answers).filter(function(pid){return H.answers[pid]&&H.answers[pid].hint===true}).length};
   try{
     await Promise.all(writes);
-    await hostSet({status:'reveal',reveal:H.reveal});
+    H.teamBoard=H.teamMode?teamBoardOf(H.scores,H.teamOf,H.teamCount):null;
+    await hostSet({status:'reveal',reveal:H.reveal,teamBoard:H.teamBoard?H.teamBoard.map(function(x){return {teamIdx:x.teamIdx,name:x.name,score:x.score,members:x.members}}):null});
   }catch(e){H.err='Não foi possível publicar a resposta: '+(e&&e.message||'erro desconhecido')}
   H.status='reveal';H.revealing=false;
   render();window.scrollTo(0,0);
@@ -1950,10 +2044,12 @@ function hostLobby(H){
       }},'Copiar')),
       copyMsg),
     h('section',{class:'gcard','aria-labelledby':'pl-h'},
-      h('div',{class:'bar'},h('h2',{class:'lbl',id:'pl-h',style:'margin:0'},'Jogadores'),h('span',{class:'count'},String(list.length))),
-      list.length
+      h('div',{class:'bar'},h('h2',{class:'lbl',id:'pl-h',style:'margin:0'},'Jogadores'),
+        h('div',{class:'qa'},H.teamMode&&list.length>1?h('button',{class:'btn sm',onclick:function(){hostTeamShuffle(H)}},'Embaralhar equipes'):null,h('span',{class:'count'},String(list.length)))),
+      H.teamMode?teamLobbyGroups(H,list):(list.length
         ?h('ul',{class:'plist'},list.map(function(pl){return h('li',{class:'pchip'},avSvg(avOf(pl),40),h('span',null,pl.name||'Jogador'))}))
-        :h('p',{class:'waiting'},'Esperando jogadores…'),
+        :h('p',{class:'waiting'},'Esperando jogadores…')),
+      teamControls(H),
       liveTimeSelect(H),
       h('div',{class:'footbar'},
         h('button',{class:'btn go big',disabled:!list.length||H.busy,onclick:hostNextQuestion},'Começar'),
@@ -2010,7 +2106,13 @@ function hostBoardView(H){
   var list=ranked(H.scores), last=H.i+1>=H.qs.length;
   var root=h('div',{class:'game stack'});
   root.append(liveBar(h('span',{class:'chip'},(H.i+1)+' / '+H.qs.length),H.title,hostExitNode(H)));
-  root.append(h('div',{class:'gcard'},
+  if(H.teamMode){
+    var tb=teamBoardOf(H.scores,H.teamOf,H.teamCount);
+    root.append(h('div',{class:'gcard'},
+      h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Classificação das equipes'),
+      teamRows(tb,null)));
+    if(list.length) root.append(h('div',{class:'gcard'},h('h3',{class:'lbl',style:'margin:0'},'Destaques'),playerRows(list,null,3,true)));
+  }else root.append(h('div',{class:'gcard'},
     h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Classificação'),
     list.length?playerRows(list,null,5,true):h('p',{class:'muted'},'Sem pontuações.')));
   root.append(h('div',{class:'footbar'},
@@ -2021,7 +2123,14 @@ function hostEndView(H){
   var list=ranked(H.scores);
   var root=h('div',{class:'game stack'});
   root.append(liveBar(h('span',{class:'chip'},'Fim'),H.title,hostExitNode(H)));
-  root.append(h('div',{class:'gcard'},
+  if(H.teamMode){
+    var tb=teamBoardOf(H.scores,H.teamOf,H.teamCount).filter(function(x){return x.members});
+    root.append(h('div',{class:'gcard'},
+      h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Pódio das equipes'),
+      tb.length?podiumBlock(tb,null,H):h('p',{class:'muted'},'Nenhuma equipe pontuou.'),
+      tb.length>3?teamRows(tb.slice(3),null):null));
+    if(list.length) root.append(h('div',{class:'gcard'},h('h3',{class:'lbl',style:'margin:0'},'Destaques individuais'),playerRows(list,null,3,false)));
+  }else root.append(h('div',{class:'gcard'},
     h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Pódio'),
     list.length?podiumBlock(list,null,H):h('p',{class:'muted'},'Ninguém pontuou neste jogo.')));
   root.append(reportCard(H,list));
@@ -2056,12 +2165,21 @@ function reportCard(H,list){
         h('div',{class:'rbar','aria-hidden':'true'},h('i',{style:'width:'+pc+'%'})));
     })));
   }else card.append(h('p',{class:'muted'},'Os dados por pergunta aparecem quando o jogo é jogado do início ao fim nesta tela.'));
+  if(H.teamMode){
+    var tbr=teamBoardOf(H.scores,H.teamOf,H.teamCount);
+    card.append(h('h3',{class:'lbl',style:'margin:0'},'Desempenho por equipe'));
+    card.append(h('div',{class:'tscroll'},h('table',{class:'rtable'},
+      h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'Equipe'),h('th',null,'Integrantes'),h('th',null,'Acertos (média)'),h('th',null,'Pontos (média)'))),
+      h('tbody',null,tbr.map(function(x,i){
+        return h('tr',null,h('td',null,String(i+1)),h('td',null,x.name),h('td',null,String(x.members)),h('td',null,String(x.avgCorrect).replace('.',',')),h('td',null,fmt(x.score)));
+      })))));
+  }
   if(list.length){
     card.append(h('h3',{class:'lbl',style:'margin:0'},'Desempenho por aluno'));
     card.append(h('div',{class:'tscroll'},h('table',{class:'rtable'},
-      h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'Nome'),h('th',null,'Acertos'),h('th',null,'Pontos'))),
+      h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'Nome'),H.teamMode?h('th',null,'Equipe'):null,h('th',null,'Acertos'),h('th',null,'Pontos'))),
       h('tbody',null,list.map(function(e,i){
-        return h('tr',null,h('td',null,String(i+1)),h('td',null,e.name||'Jogador'),h('td',null,(e.correct||0)+'/'+(stats.length||nq)),h('td',null,fmt(e.score||0)));
+        return h('tr',null,h('td',null,String(i+1)),h('td',null,e.name||'Jogador'),H.teamMode?h('td',null,Number.isInteger(H.teamOf[e.id])?TEAMS[H.teamOf[e.id]]:'—'):null,h('td',null,(e.correct||0)+'/'+(stats.length||nq)),h('td',null,fmt(e.score||0)));
       })))));
   }
   return card;
@@ -2071,8 +2189,12 @@ function downloadReport(H,list,stats){
   var rows=[['Relatório',H.title],['Data',new Date().toLocaleString('pt-BR')],[],
     ['Pergunta','Texto','Resposta certa','Acertaram','Responderam','Jogadores','% de acerto','Dicas usadas']];
   stats.forEach(function(st){rows.push(['P'+st.n,cleanQ(st.q),st.correct,st.right,st.answered,st.total,st.total?Math.round(st.right/st.total*100):0,st.hints||0])});
-  rows.push([]);rows.push(['Posição','Nome','Pontos','Acertos']);
-  list.forEach(function(e,i){rows.push([i+1,e.name||'Jogador',e.score||0,e.correct||0])});
+  if(H.teamMode){
+    rows.push([]);rows.push(['Posição','Equipe','Integrantes','Acertos (média)','Pontos (média)']);
+    teamBoardOf(H.scores,H.teamOf,H.teamCount).forEach(function(x,i){rows.push([i+1,x.name,x.members,String(x.avgCorrect).replace('.',','),x.score])});
+  }
+  rows.push([]);rows.push(H.teamMode?['Posição','Nome','Equipe','Pontos','Acertos']:['Posição','Nome','Pontos','Acertos']);
+  list.forEach(function(e,i){rows.push(H.teamMode?[i+1,e.name||'Jogador',Number.isInteger(H.teamOf[e.id])?TEAMS[H.teamOf[e.id]]:'',e.score||0,e.correct||0]:[i+1,e.name||'Jogador',e.score||0,e.correct||0])});
   var csv='\ufeff'+rows.map(function(r){return r.map(csvCell).join(';')}).join('\r\n');
   var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   var a=document.createElement('a');
@@ -2101,7 +2223,10 @@ function playerOpen(pin){
       if(J.joined){render();window.scrollTo(0,0);Snd.whoosh();cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(playerLoop)}
       return;
     }
-    if(prev&&prev.status===g.status&&prev.i===g.i) return;
+    if(prev&&prev.status===g.status&&prev.i===g.i){
+      if(g.status==='lobby'&&JSON.stringify([prev.teamMode,prev.teamCount,prev.teamAssign,prev.teamOf&&prev.teamOf[S.myId]])!==JSON.stringify([g.teamMode,g.teamCount,g.teamAssign,g.teamOf&&g.teamOf[S.myId]])) playerPaint();
+      return;
+    }
     if(g.status!=='question') cancelAnimationFrame(S.raf);
     if(g.status==='ended'){Snd.finale(1);Confetti.start({})}
     playerSound();
@@ -2142,7 +2267,9 @@ async function playerJoin(){
   store.set('cq:name',J.name);
   Snd.init();J.busy=true;J.err='';render();
   try{
-    await S.db.doc('games/'+J.pin+'/players/'+S.myId).set({name:J.name,avatar:avStr(S.avatar),at:new Date().toISOString()});
+    var pdoc={name:J.name,avatar:avStr(S.avatar),at:new Date().toISOString()};
+    if(Number.isInteger(J.team)) pdoc.team=J.team;
+    await S.db.doc('games/'+J.pin+'/players/'+S.myId).set(pdoc);
     J.joined=true;Snd.click();
     playerScores();
     var g=J.game;
@@ -2177,6 +2304,18 @@ function playerLoop(){
   S.raf=requestAnimationFrame(playerLoop);
 }
 function playerLeave(){S.join=null;go('library')}
+function teamPicker(g,J,joined){
+  var n=validTeamCount(g.teamCount), cur=joined?(g.teamOf&&g.teamOf[S.myId]):J.team;
+  return h('div',{class:'stack',style:'gap:8px'},
+    h('span',{class:'lbl',style:'margin:0'},joined?'Trocar de equipe':'Escolha sua equipe'),
+    h('div',{class:'tpick',role:'radiogroup','aria-label':'Equipes'},Array.from({length:n},function(_,i){
+      return h('button',{class:'tpbtn',role:'radio','aria-checked':String(cur===i),style:tileStyle(i),onclick:async function(){
+        J.team=i;
+        if(joined){try{await S.db.doc('games/'+J.pin+'/players/'+S.myId).update({team:i})}catch(e){}}
+        Snd.click();rerenderKeepScroll();
+      }},teamBadge(i,24),h('span',null,TEAMS[i]));
+    })));
+}
 function viewPlayer(){
   var J=S.join;
   S.refs={};
@@ -2215,15 +2354,22 @@ function viewPlayer(){
           h('label',{class:'lbl',for:'jnick',style:'margin:0'},'Seu nome'),nick,
           h('div',null,h('button',{class:'btn sm',id:'jav-toggle','aria-expanded':String(J.pickOpen),onclick:function(){J.pickOpen=!J.pickOpen;rerenderKeepScroll()}},J.pickOpen?'Fechar avatares':'Escolher avatar')))),
       J.pickOpen?avatarPicker():null,
-      h('div',null,h('button',{class:'btn go big',disabled:J.busy,onclick:playerJoin},J.busy?'Entrando…':'Entrar no jogo'))));
+      g.teamMode&&g.teamAssign==='choose'?teamPicker(g,J,false):null,
+      h('div',null,h('button',{class:'btn go big',disabled:J.busy||(g.teamMode&&g.teamAssign==='choose'&&!Number.isInteger(J.team)),onclick:playerJoin},J.busy?'Entrando…':(g.teamMode&&g.teamAssign==='choose'&&!Number.isInteger(J.team)?'Escolha uma equipe':'Entrar no jogo')))));
     return root;
   }
   var list=ranked(J.scores), rank=rankOf(list,S.myId);
+  var myTeam=g.teamMode&&g.teamOf&&Number.isInteger(g.teamOf[S.myId])?g.teamOf[S.myId]:null;
+  var tb=g.teamMode&&Array.isArray(g.teamBoard)?g.teamBoard:null;
+  var teamRank=tb&&myTeam!=null?tb.findIndex(function(x){return x.teamIdx===myTeam})+1:0;
+  if(myTeam!=null) root.insertBefore(h('div',{class:'myteam',style:tileStyle(myTeam)},teamBadge(myTeam,22),h('span',null,teamName(myTeam))),root.children[1]||null);
   if(g.status==='lobby'){
     root.append(h('div',{class:'gcard center'},
       avSvg(S.avatar,112),
       h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Você entrou, '+(J.name||'Jogador')+'!'),
+      g.teamMode?(myTeam!=null?h('p',null,'Você está na ',h('b',null,teamName(myTeam)),'.'):h('p',{class:'muted'},'Aguarde: o anfitrião está formando as equipes.')):null,
       h('p',null,'Veja seu nome na tela do anfitrião. O jogo já vai começar.')));
+    if(g.teamMode&&g.teamAssign==='choose') root.append(h('div',{class:'gcard'},teamPicker(g,J,true)));
     return root;
   }
   if(g.status==='question'&&g.q){
@@ -2258,7 +2404,15 @@ function viewPlayer(){
       last&&ok&&last.bonus?h('div',{class:'streak'},icon('flame',20),'Sequência de '+me.streak+': +'+last.bonus+' de bônus'):null,
       last&&!ok?h('div',null,'Resposta certa: ',h('b',null,correctText)):null,
       rv.explain?h('div',{class:'expl'},rv.explain):null,
+      teamRank?h('div',{class:'note'},'Sua equipe está em '+teamRank+'º lugar.'):null,
       rank?h('div',{class:'note'},'Você está em '+rank+'º lugar com '+fmt(me.score||0)+' pontos.'):null));
+    return root;
+  }
+  if(g.status==='board'&&tb){
+    root.append(h('div',{class:'gcard'},
+      h('h2',{class:'h2',tabindex:'-1','data-focus':''},teamRank?'Sua equipe está em '+teamRank+'º lugar':'Classificação das equipes'),
+      teamRows(tb,myTeam),
+      rank?h('p',{class:'muted'},'Você: '+rank+'º lugar individual, '+fmt(me.score||0)+' pontos.'):null));
     return root;
   }
   if(g.status==='board'){
@@ -2274,8 +2428,9 @@ function viewPlayer(){
       h('span',{class:'who'},J.name||'Jogador'),
       h('span',{class:'big-score'},fmt(me&&me.score||0)),
       h('span',{class:'muted'},'pontos'),
-      rank?h('span',{class:'rank'},'Você ficou em '+rank+'º lugar'+(g.cancelled?' (jogo interrompido)':'')):null),
-    list.length?podiumBlock(list,S.myId,J):null));
+      teamRank?h('span',{class:'rank'},'Sua equipe ficou em '+teamRank+'º lugar'):null,
+      rank?h('span',{class:teamRank?'muted':'rank'},'Você ficou em '+rank+'º lugar'+(teamRank?' individual':'')+(g.cancelled?' (jogo interrompido)':'')):null),
+    tb?podiumBlock(tb.filter(function(x){return x.members}).map(function(x){return Object.assign({id:'t'+x.teamIdx},x)}),myTeam!=null?'t'+myTeam:null,J):(list.length?podiumBlock(list,S.myId,J):null)));
   root.append(h('div',{class:'footbar'},h('button',{class:'btn wh big',onclick:playerLeave},'Biblioteca')));
   return root;
 }

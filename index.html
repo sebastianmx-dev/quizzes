@@ -460,6 +460,30 @@ div.ans{cursor:default}
 .linkrow{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
 .rec-dot{width:12px;height:12px;border-radius:50%;background:var(--bad);animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.2}}
+/* Equipes */
+.teamb{display:inline-grid;place-items:center;flex:none;border-radius:28%;background:var(--c);color:var(--ci);box-shadow:0 2px 0 rgba(0,0,0,.2)}
+.teamb svg.shape{width:56%;height:56%}
+.tgroups{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:10px}
+.tgroup{display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:14px;background:var(--field);border:2px solid var(--c)}
+.thead{display:flex;align-items:center;gap:8px}
+.thead strong{flex:1;min-width:0}
+.tgroup .pchip{padding:3px 12px 3px 3px;font-size:14px}
+.tboard{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.tboard li{display:grid;grid-template-columns:24px auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:var(--field);border-left:6px solid var(--c)}
+.tboard li.me{background:var(--accent-soft)}
+.tboard .rk{font:700 14px var(--f-mono);color:var(--muted)}
+.tinfo{display:flex;flex-direction:column;gap:2px;min-width:0}
+.tinfo .nm{font-weight:700}
+.tinfo .muted{font-size:13px}
+.tbar2{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:2px}
+.tbar2 i{display:block;height:100%;background:var(--c);border-radius:99px}
+.tboard .pt{font:800 18px var(--f-display);font-variant-numeric:tabular-nums}
+.myteam{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:4px 14px 4px 6px;border-radius:99px;background:var(--c);color:var(--ci);font-weight:700;font-size:14px}
+.myteam .teamb{box-shadow:none;background:rgba(255,255,255,.25);color:inherit}
+.tpick{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tpbtn{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 12px;border-radius:14px;border:3px solid transparent;background:var(--c);color:var(--ci);font:700 16px var(--f-body);cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+.tpbtn .teamb{box-shadow:none;background:rgba(255,255,255,.25);color:inherit}
+.tpbtn[aria-checked="true"]{border-color:#fff;outline:3px solid var(--ink);outline-offset:1px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* Base (antes vinha do invólucro do Claude) */
@@ -491,8 +515,8 @@ img{max-width:100%}
 </header>
 <main class="wrap" id="app"></main>
 
-<script src="firebase-config.js?v=202610131629"></script>
-<script type="module" src="backend-firebase.js?v=202610131629"></script>
-<script src="app.js?v=202610131629"></script>
+<script src="firebase-config.js?v=202610131633"></script>
+<script type="module" src="backend-firebase.js?v=202610131633"></script>
+<script src="app.js?v=202610131633"></script>
 </body>
 </html>

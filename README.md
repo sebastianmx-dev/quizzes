@@ -49,6 +49,14 @@ Os e-mails dos gestores ficam só no seu banco de dados e não aparecem no códi
 2. Os alunos leem o QR com a câmera do celular (ou abrem o site e digitam o PIN), escrevem o nome, escolhem um avatar e entram.
 3. Clique em **Começar**. A resposta aparece quando todos respondem ou quando o tempo acaba.
 
+## Jogo por equipes
+Na sala de espera do jogo ao vivo, escolha **Modo de jogo → Equipes**:
+- **Número de equipes**: de 2 a 6 (Vermelha ▲, Azul ◆, Amarela ●, Verde ■, Roxa e Turquesa).
+- **Como formar**: *Distribuir automaticamente* (equilibra o número de alunos por equipe) ou *Os alunos escolhem* (cada aluno escolhe ao entrar e pode trocar enquanto o jogo não começa).
+- O botão **Embaralhar equipes** redistribui todos os alunos ao acaso.
+
+A pontuação de cada equipe é a **média** dos pontos dos integrantes, para que equipes maiores não tenham vantagem. A classificação, o pódio e o relatório (com o CSV) mostram as equipes, além dos destaques individuais; no celular, cada aluno vê a sua equipe e a posição dela.
+
 ## Recursos didáticos
 - **Dica por pergunta**: no editor, cada pergunta pode ter uma dica opcional. O aluno pode abri-la durante a pergunta (no jogo individual e no celular, ao vivo); se acertar, ganha metade dos pontos.
 - **Modo treino**: na entrada do jogo individual, marque “Modo treino” para jogar sem cronômetro, com explicação em todas as perguntas e sem enviar a pontuação para a tabela.
