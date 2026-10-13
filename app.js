@@ -116,9 +116,16 @@ var AV={
   hc:['#2B1D14','#6B3E1F','#D9A441','#B5462C','#E6E6E6','#3A63D8','#D94F9A'],
   shirt:['#FFFFFF','#1A2238','#F2B200','#2FA36B','#E2574C','#5B7BE0']
 };
-var AV_PARTS=[['bg','Fundo',8],['skin','Pele',6],['hair','Cabelo',6],['hc','Cor do cabelo',7],['eyes','Olhos',4],['mouth','Boca',5],['acc','Acessório',6],['shirt','Camiseta',6]];
-var AV_PRESETS=['1-0-1-0-0-0-0-0','4-2-3-0-1-1-0-1','2-1-2-3-3-0-1-3','0-3-4-0-1-4-2-1','5-4-5-1-0-0-0-2','3-0-2-2-2-1-3-4',
-  '6-2-0-0-1-2-4-5','7-1-1-4-3-3-1-0','1-3-3-0-0-1-5-4','4-5-4-5-3-4-0-3','2-4-2-6-1-0-3-1','0-0-5-3-2-1-0-5'];
+var AV_PARTS=[['bg','Fundo',8],['skin','Pele',6],['hair','Cabelo',9],['hc','Cor do cabelo',7],['eyes','Olhos',4],['mouth','Boca',5],['acc','Acessório',6],['shirt','Camiseta',6]];
+// Avatares prontos: seis por tom de pele, com cabelos liso, comprido, cacheado/crespo, coque, tranças,
+// raspado, careca e lenço/hijab, além de óculos, fones e outros acessórios.
+var AV_PRESETS=[
+  '1-0-1-1-0-0-0-0','4-0-2-2-1-1-0-3','6-0-3-3-3-0-1-5','3-0-5-0-0-1-0-2','7-0-0-4-1-0-1-1','0-0-7-1-1-4-3-4',
+  '2-1-4-0-0-1-3-1','5-1-2-0-1-0-0-4','0-1-1-1-3-4-0-3','6-1-8-5-1-0-0-0','1-1-3-0-1-1-5-2','3-1-6-0-0-1-1-5',
+  '3-2-3-0-0-1-0-0','7-2-2-1-3-0-1-2','4-2-7-0-1-0-3-5','1-2-5-0-0-1-0-3','6-2-8-6-0-0-1-3','2-2-4-6-1-4-0-1',
+  '2-3-3-0-1-1-0-4','0-3-6-0-0-0-0-5','5-3-1-0-3-1-0-0','4-3-8-0-1-1-0-2','7-3-0-0-0-1-1-3','1-3-2-1-1-0-4-2',
+  '1-4-3-0-1-1-0-2','6-4-6-0-3-0-0-3','3-4-7-0-0-1-3-1','5-4-2-0-1-4-1-0','2-4-5-0-1-1-0-5','5-4-8-3-0-0-0-4'
+];
 var avN=0;
 function avParse(s){
   var parts=String(s||'').split('-'), a={};
@@ -127,17 +134,12 @@ function avParse(s){
 }
 function avStr(a){return AV_PARTS.map(function(p){return a[p[0]]}).join('-')}
 function avRandom(){
-  var a={};
-  AV_PARTS.forEach(function(p){a[p[0]]=Math.floor(Math.random()*p[2])});
-  if(Math.random()<.5) a.acc=0;
-  return a;
+  return avParse(AV_PRESETS[Math.floor(Math.random()*AV_PRESETS.length)]);
 }
 function avFromName(name){
   var x=2166136261;
   String(name||'').split('').forEach(function(c){x^=c.charCodeAt(0);x=Math.imul(x,16777619)>>>0});
-  var a={};
-  AV_PARTS.forEach(function(p,i){a[p[0]]=(Math.imul(x^((i+1)*0x9E3779B1),0x85EBCA6B)>>>0)%p[2]});
-  return a;
+  return avParse(AV_PRESETS[(Math.imul(x,0x85EBCA6B)>>>0)%AV_PRESETS.length]);
 }
 function avOf(entry){return entry&&typeof entry.avatar==='string'?avParse(entry.avatar):avFromName(entry&&entry.name)}
 function avSvg(a,size){
@@ -149,12 +151,17 @@ function avSvg(a,size){
   m+='<path d="M8 66C8 51 19 46 32 46S56 51 56 66Z" fill="'+AV.shirt[a.shirt]+'"/>';
   m+='<rect x="28" y="40" width="8" height="8" fill="'+sk+'"/>';
   m+='<circle cx="17.5" cy="34" r="3.6" fill="'+sk+'"/><circle cx="46.5" cy="34" r="3.6" fill="'+sk+'"/>';
+  if(a.hair===6){var br='';for(var by=30;by<=55;by+=5)br+='<circle cx="16" cy="'+by+'" r="3.4"/><circle cx="48" cy="'+by+'" r="3.4"/>';m+='<g fill="'+hc+'">'+br+'</g>'}
+  if(a.hair===8) m+='<path d="M13.5 36C13.5 15 23 9.5 32 9.5S50.5 15 50.5 36V50C46 54 40 55.5 32 55.5S18 54 13.5 50Z" fill="'+hc+'"/>';
   m+='<circle cx="32" cy="33" r="15" fill="'+sk+'"/>';
   var SHORT='<path d="M17 31C17 19 24 15 32 15S47 19 47 31C44 25 38 22.5 32 23S20 25 17 31Z"/>';
   var hair=['',SHORT,SHORT,
     '<circle cx="20" cy="24" r="6"/><circle cx="26" cy="18.5" r="6.5"/><circle cx="32" cy="16.5" r="7"/><circle cx="38" cy="18.5" r="6.5"/><circle cx="44" cy="24" r="6"/><circle cx="17.5" cy="30.5" r="4.5"/><circle cx="46.5" cy="30.5" r="4.5"/>',
     '<path d="M17 30L18 20L22 23L24 13L28 19L32 11L36 19L40 13L42 23L46 20L47 30C42 25 38 23 32 23S22 25 17 30Z"/>',
-    SHORT+'<circle cx="32" cy="12" r="6"/>'][a.hair];
+    SHORT+'<circle cx="32" cy="12" r="6"/>',
+    SHORT,
+    '<path d="M17.6 30C18 20.5 24 17.6 32 17.6S46 20.5 46.4 30C43 26.2 38 24.6 32 24.6S21 26.2 17.6 30Z" opacity=".9"/>',
+    '<path d="M16.5 31C16.5 18.5 24 14 32 14S47.5 18.5 47.5 31C44 24.5 38.5 22 32 22S20 24.5 16.5 31Z"/>'][a.hair];
   if(hair) m+='<g fill="'+hc+'">'+hair+'</g>';
   m+='<circle cx="23" cy="38.5" r="2.4" fill="#E2576B" opacity=".3"/><circle cx="41" cy="38.5" r="2.4" fill="#E2576B" opacity=".3"/>';
   var arcL='<path d="M23.5 34Q26 30.5 28.5 34" fill="none" stroke="'+D+'" stroke-width="1.8" stroke-linecap="round"/>';
@@ -184,26 +191,19 @@ function setAvatar(a){
 }
 function avatarPicker(){
   var cur=avStr(S.avatar);
-  var presets=h('div',{class:'av-grid',role:'group','aria-label':'Avatares prontos'},AV_PRESETS.map(function(s,i){
-    var b=h('button',{class:'av-opt',id:'avp-'+i,'aria-pressed':String(s===cur),'aria-label':'Avatar pronto '+(i+1),onclick:function(){setAvatar(avParse(s))}});
+  var presets=h('div',{class:'av-grid',role:'group','aria-label':'Escolha um avatar'},AV_PRESETS.map(function(s,i){
+    var b=h('button',{class:'av-opt',id:'avp-'+i,'aria-pressed':String(s===cur),'aria-label':'Avatar '+(i+1),onclick:function(){setAvatar(avParse(s))}});
     b.append(avSvg(avParse(s),52));
     return b;
   }));
-  var steps=h('div',{class:'av-steps'},AV_PARTS.map(function(p){
-    var k=p[0];
-    function step(d){var a=Object.assign({},S.avatar);a[k]=(a[k]+d+p[2])%p[2];setAvatar(a)}
-    return h('div',{class:'av-step'},
-      h('span',{class:'av-lbl'},p[1]),
-      h('button',{class:'btn sm',id:'avs-'+k+'-p','aria-label':p[1]+': anterior',onclick:function(){step(-1)}},'‹'),
-      h('span',{class:'av-n'},(S.avatar[k]+1)+'/'+p[2]),
-      h('button',{class:'btn sm',id:'avs-'+k+'-n','aria-label':p[1]+': seguinte',onclick:function(){step(1)}},'›'));
-  }));
   return h('div',{class:'av-picker'},
-    h('span',{class:'lbl',style:'margin:0'},'Prontos'),
-    presets,
-    h('span',{class:'lbl',style:'margin:0'},'Personalizar'),
-    steps,
-    h('div',{class:'qa'},h('button',{class:'btn sm',id:'av-rand',onclick:function(){setAvatar(avRandom())}},'Aleatório')));
+    h('div',{class:'bar'},
+      h('span',{class:'lbl',style:'margin:0'},'Escolha um avatar'),
+      h('button',{class:'btn sm',id:'av-rand',onclick:function(){
+        var a;do{a=avRandom()}while(AV_PRESETS.length>1&&avStr(a)===avStr(S.avatar));
+        setAvatar(a);
+      }},'Aleatório')),
+    presets);
 }
 
 /* ---------- som: efeitos e música gerados no navegador ---------- */
