@@ -2,7 +2,7 @@
 
 Sugestões levantadas em 12/10/2026 para deixar o Caderno de Quizzes mais didático e dinâmico. Ainda não foram implementadas; ficam aqui para serem retomadas.
 
-## 1. Perguntas com imagem ou áudio
+## 1. Perguntas com imagem ou áudio ✅ implementado em 13/10/2026
 Permitir anexar uma imagem ou um áudio curto a cada pergunta. Exemplo: ouvir uma frase e escolher a forma verbal certa.
 - Editor: campo para enviar o arquivo (Firebase Storage) ou colar um link.
 - Ao vivo: a mídia aparece na tela do anfitrião; o áudio toca na sala.
@@ -13,7 +13,7 @@ Permitir anexar uma imagem ou um áudio curto a cada pergunta. Exemplo: ouvir um
 - **Ordenar palavras** para formar a frase correta.
 - **Sim/não rápido** (rodada relâmpago com tempo curto).
 
-## 3. Modo equipes
+## 3. Modo equipes ✅ implementado em 13/10/2026
 Os alunos escolhem uma equipe ao entrar; a pontuação é somada (ou a média) por equipe, e o pódio mostra as equipes.
 
 ## 4. Histórico por aluno
