@@ -359,6 +359,91 @@ document.addEventListener('visibilitychange',function(){
   try{if(document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume()}catch(e){}
 });
 
+/* ---------- comemoração: confetes em canvas ---------- */
+var Confetti={
+  cv:null,cx:null,parts:[],raf:0,rainUntil:0,W:0,H:0,dpr:1,last:0,
+  COLORS:['#C9303F','#1F5BD8','#E5A400','#1B8A4B','#7B3FC4','#0A7B7D','#F2B200','#E86A2E','#FFFFFF','#FF7AB6'],
+  start:function(o){
+    if(reduceMotion) return;
+    o=o||{};
+    this.ensure();
+    var n=o.light?40:150;
+    this.burst(-0.02*this.W,this.H+10,n/2,1);
+    this.burst(1.02*this.W,this.H+10,n/2,-1);
+    this.rainUntil=o.light?0:performance.now()+(o.ms||6000);
+    if(!this.raf){this.last=performance.now();this.raf=requestAnimationFrame(this.tick.bind(this))}
+  },
+  ensure:function(){
+    if(!this.cv){
+      var c=document.createElement('canvas');
+      c.className='confetti';c.setAttribute('aria-hidden','true');
+      document.body.appendChild(c);
+      this.cv=c;this.cx=c.getContext('2d');
+      var self=this;this.onResize=function(){self.size()};
+      window.addEventListener('resize',this.onResize);
+    }
+    this.size();
+  },
+  size:function(){
+    this.dpr=Math.min(2,window.devicePixelRatio||1);
+    this.W=window.innerWidth;this.H=window.innerHeight;
+    this.cv.width=Math.round(this.W*this.dpr);this.cv.height=Math.round(this.H*this.dpr);
+    this.cx.setTransform(this.dpr,0,0,this.dpr,0,0);
+  },
+  piece:function(x,y,vx,vy){
+    var r=Math.random(), k=Math.min(1.4,Math.max(.8,this.W/700));
+    return {x:x,y:y,vx:vx,vy:vy,
+      shape:r<.62?'rect':r<.85?'dot':'ribbon',
+      w:(7+Math.random()*7)*k,h:(4+Math.random()*5)*k,
+      rot:Math.random()*6.28,vr:(Math.random()-.5)*.25,
+      tilt:Math.random()*6.28,vt:.05+Math.random()*.12,
+      sway:Math.random()*6.28,
+      color:this.COLORS[Math.floor(Math.random()*this.COLORS.length)],
+      drag:.985+Math.random()*.01};
+  },
+  burst:function(x,y,n,dir){
+    var sp=Math.max(9,Math.min(17,this.H/48));
+    for(var i=0;i<n&&this.parts.length<450;i++){
+      var ang=(-Math.PI/2)+dir*(.25+Math.random()*.5);
+      var v=sp*(.7+Math.random()*.6);
+      this.parts.push(this.piece(x,y,Math.cos(ang)*v,Math.sin(ang)*v));
+    }
+  },
+  tick:function(now){
+    var dt=Math.min(2.5,(now-this.last)/16.67);this.last=now;
+    if(now<this.rainUntil&&this.parts.length<450){
+      var rate=Math.max(1,Math.round(this.W/260));
+      for(var i=0;i<rate;i++) this.parts.push(this.piece(Math.random()*this.W,-20,(Math.random()-.5)*1.5,1+Math.random()*2));
+    }
+    var cx=this.cx;cx.clearRect(0,0,this.W,this.H);
+    var keep=[];
+    for(var j=0;j<this.parts.length;j++){
+      var p=this.parts[j];
+      p.vx*=Math.pow(p.drag,dt);p.vy=p.vy*Math.pow(p.drag,dt)+.16*dt;
+      if(p.vy>3.2) p.vy=3.2+(p.vy-3.2)*.9;
+      p.sway+=.05*dt;
+      p.x+=(p.vx+Math.sin(p.sway)*.8)*dt;p.y+=p.vy*dt;
+      p.rot+=p.vr*dt;p.tilt+=p.vt*dt;
+      if(p.y>this.H+30||p.x<-60||p.x>this.W+60){continue}
+      keep.push(p);
+      cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);cx.fillStyle=p.color;cx.strokeStyle=p.color;
+      var sc=Math.cos(p.tilt);
+      if(p.shape==='rect'){cx.scale(1,sc);cx.fillRect(-p.w/2,-p.h/2,p.w,p.h)}
+      else if(p.shape==='dot'){cx.scale(sc,1);cx.beginPath();cx.arc(0,0,p.h*.7,0,6.283);cx.fill()}
+      else{cx.lineWidth=2.4;cx.lineCap='round';cx.beginPath();cx.moveTo(-p.w,0);cx.bezierCurveTo(-p.w/3,-p.w*.6*sc,p.w/3,p.w*.6*sc,p.w,0);cx.stroke()}
+      cx.restore();
+    }
+    this.parts=keep;
+    if(keep.length||now<this.rainUntil) this.raf=requestAnimationFrame(this.tick.bind(this));
+    else{this.raf=0;cx.clearRect(0,0,this.W,this.H)}
+  },
+  stop:function(){
+    if(this.raf) cancelAnimationFrame(this.raf);
+    this.raf=0;this.parts=[];this.rainUntil=0;
+    if(this.cx) this.cx.clearRect(0,0,this.W,this.H);
+  }
+};
+
 /* ---------- validação e formato dos quizzes (esquema 2) ---------- */
 function numOr(v,min,max,fallback){
   return (typeof v==='number'&&isFinite(v)&&v>=min&&v<=max)?Math.round(v):fallback;
@@ -403,6 +488,7 @@ function leave(){
 }
 function go(view){
   if(S.view==='play'&&view!=='play') stopGame();
+  if(view!==S.view) Confetti.stop();
   if((S.view==='host'||S.view==='player')&&view!==S.view) liveStop();
   if(S.view==='admin'&&view!=='admin') stopPreview();
   S.view=view;render();window.scrollTo(0,0);
@@ -857,12 +943,13 @@ function next(){
 /* ---------- jogo: resultado e tabela ---------- */
 function finish(){
   var p=S.play;
-  p.phase='done';p.confirmExit=false;
+  p.phase='done';p.confirmExit=false;p.board=null;
   var cur=bestOf(p.quiz.id);
   if(!cur||cur.points==null||p.score>cur.points) store.set('cq:best:'+p.quiz.id,JSON.stringify({points:p.score,score:p.correct,total:p.qs.length}));
   render();window.scrollTo(0,0);
   var f=app.querySelector('[data-focus]');if(f)f.focus({preventScroll:true});
   playWinner(p.correct/p.qs.length);
+  Confetti.start(p.correct/p.qs.length>=.5?{}:{light:true});
   saveScore(p);
 }
 async function saveScore(p){
@@ -930,13 +1017,15 @@ function tableBlock(p){
   var b=p.board;
   if(!b) return h('p',{class:'muted'},'Não foi possível carregar a tabela.');
   if(!b.length) return h('p',{class:'muted'},'Ainda não há pontuações registradas.');
-  return podiumBlock(b,p.myId);
+  return podiumBlock(b,p.myId,p);
 }
-function podiumBlock(b,myId){
+function podiumBlock(b,myId,owner){
   var p={myId:myId};
+  var animate=!!owner&&!owner.podiumShown&&!reduceMotion;
+  if(owner) owner.podiumShown=true;
   var top=b.slice(0,3), wrap=h('div',{class:'stack'});
   var order=top.length>=3?[1,0,2]:top.map(function(_,i){return i});
-  wrap.append(h('div',{class:'podium'},order.map(function(i){
+  wrap.append(h('div',{class:'podium'+(animate?' anim':'')},order.map(function(i){
     var e=top[i];
     return h('div',{class:'pod p'+(i+1)+(e.id===p.myId?' me':'')},
       avSvg(avOf(e),i===0?60:48),
@@ -1347,6 +1436,7 @@ async function hostEnd(){
   cancelAnimationFrame(S.raf);Snd.musicStop();
   render();window.scrollTo(0,0);
   playWinner(1);
+  Confetti.start({ms:8000});
 }
 async function hostQuit(){
   var H=S.host;
@@ -1467,7 +1557,7 @@ function hostEndView(H){
   root.append(liveBar(h('span',{class:'chip'},'Fim'),H.title,hostExitNode(H)));
   root.append(h('div',{class:'gcard'},
     h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Pódio'),
-    list.length?podiumBlock(list,null):h('p',{class:'muted'},'Ninguém pontuou neste jogo.')));
+    list.length?podiumBlock(list,null,H):h('p',{class:'muted'},'Ninguém pontuou neste jogo.')));
   root.append(h('div',{class:'footbar'},h('button',{class:'btn wh big',onclick:function(){S.host=null;go('library')}},'Biblioteca')));
   return root;
 }
@@ -1493,7 +1583,7 @@ function playerOpen(pin){
     }
     if(prev&&prev.status===g.status&&prev.i===g.i) return;
     if(g.status!=='question') cancelAnimationFrame(S.raf);
-    if(g.status==='ended') Snd.finale(1);
+    if(g.status==='ended'){Snd.finale(1);Confetti.start({})}
     playerSound();
     render();window.scrollTo(0,0);
   },function(){J.loaded=true;J.err='A conexão com o jogo caiu. Recarregue a página.';playerPaint()}));
@@ -1663,7 +1753,7 @@ function viewPlayer(){
       h('span',{class:'big-score'},fmt(me&&me.score||0)),
       h('span',{class:'muted'},'pontos'),
       rank?h('span',{class:'rank'},'Você ficou em '+rank+'º lugar'+(g.cancelled?' (jogo interrompido)':'')):null),
-    list.length?podiumBlock(list,S.myId):null));
+    list.length?podiumBlock(list,S.myId,J):null));
   root.append(h('div',{class:'footbar'},h('button',{class:'btn wh big',onclick:playerLeave},'Biblioteca')));
   return root;
 }

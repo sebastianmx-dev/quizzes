@@ -381,6 +381,18 @@ div.ans{cursor:default}
 .music-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px}
 .mrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end}
 .mrow .btn{min-width:72px}
+/* Comemoração */
+.confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+@keyframes rise{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes popIn{0%{opacity:0;transform:translateY(14px) scale(.7)}70%{opacity:1;transform:translateY(-4px) scale(1.06)}100%{opacity:1;transform:none}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(242,178,0,0)}50%{box-shadow:0 0 0 8px rgba(242,178,0,.35)}}
+.podium.anim .blk{transform-origin:bottom center;animation:rise .7s cubic-bezier(.2,1.3,.4,1) both}
+.podium.anim .pod>:not(.blk){animation:popIn .55s ease-out both}
+.podium.anim .p3 .blk{animation-delay:.2s}.podium.anim .p3>:not(.blk){animation-delay:.75s}
+.podium.anim .p2 .blk{animation-delay:.9s}.podium.anim .p2>:not(.blk){animation-delay:1.45s}
+.podium.anim .p1 .blk{animation-delay:1.6s}.podium.anim .p1>:not(.blk){animation-delay:2.2s}
+.podium .pod.p1 .av{border-radius:50%;animation:glow 2s ease-in-out .6s 3}
+.podium.anim .pod.p1 .av{animation:popIn .55s ease-out 2.2s both,glow 2s ease-in-out 2.8s 3}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* Base (antes vinha do invólucro do Claude) */
