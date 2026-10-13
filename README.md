@@ -58,6 +58,19 @@ Os e-mails dos gestores ficam só no seu banco de dados e não aparecem no códi
 
 No JSON de importação, a dica é o campo `"hint"` de cada pergunta.
 
+## Imagens e áudio nas perguntas
+No editor, cada pergunta pode ter **uma imagem ou um áudio**:
+- **Enviar imagem**: a página reduz e comprime a imagem automaticamente (até 1280 px).
+- **Enviar áudio**: MP3, M4A, OGG ou WAV de até 700 KB (cerca de 45 s em MP3).
+- **Gravar áudio**: grava pelo microfone, até 60 s (útil para ditados e pronúncia).
+- **Colar link**: usa uma imagem ou um áudio que já está na internet (endereço `https://`).
+
+No jogo, a imagem aparece na tela do anfitrião e no celular dos alunos. O áudio toca sozinho no início da pergunta (jogo individual e tela do anfitrião), abaixando a música, e pode ser ouvido de novo pelo botão **Ouvir áudio**. Para imagens, preencha a descrição: ela é lida por leitores de tela.
+
+Os arquivos ficam no próprio Firestore (coleções `media` e `mediaIndex`), porque o Firebase Storage exige o plano pago. Em **Gestão → Jogos ao vivo**, o botão **Excluir mídias sem uso** apaga arquivos que não estão mais em nenhuma pergunta.
+
+> Depois desta atualização, copie de novo o arquivo `firestore.rules` para o console do Firebase (Firestore → Regras → Publicar), porque ele ganhou as regras de mídia.
+
 ## Música
 As músicas ficam na pasta `audio/` e mudam conforme o momento do jogo: **sala de espera**, **perguntas** (acelera nos últimos 5 segundos) e **pódio**. Em **Gestão → Regras do jogo → Música** você escolhe, para cada momento, uma faixa específica, uma aleatória, a música gerada pelo navegador (só nas perguntas) ou nenhuma, e pode ouvir antes de salvar. No jogo ao vivo, a música toca só na tela do anfitrião.
 

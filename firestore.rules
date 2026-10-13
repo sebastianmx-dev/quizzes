@@ -42,6 +42,16 @@ service cloud.firestore {
       }
     }
 
+    // Imagens e áudios das perguntas (guardados no Firestore porque o Storage exige o plano pago).
+    match /media/{id} {
+      allow read: if true;
+      allow create, update: if isAdmin() && request.resource.data.data is string && request.resource.data.data.size() < 1000000;
+      allow delete: if isAdmin();
+    }
+    match /mediaIndex/{id} {
+      allow read, write: if isAdmin();
+    }
+
     match /gamekeys/{pin} {
       allow read, write: if isAdmin();
     }

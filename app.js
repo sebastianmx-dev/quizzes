@@ -471,8 +471,9 @@ var Music={
     try{a.volume=0}catch(e){}
     this.el=a;this.cur=track.id;
     var pr=a.play();if(pr&&pr.catch)pr.catch(function(){});
-    this.fade(a,this.vol,500,false);
+    this.fade(a,this.ducked?.12:this.vol,500,false);
   },
+  duck:function(on){this.ducked=!!on;if(this.el)this.fade(this.el,on?.12:this.vol,300,false)},
   fade:function(a,to,ms,pauseAtEnd){
     var from=a.volume, t0=performance.now();
     (function step(now){
@@ -583,6 +584,219 @@ var Confetti={
   }
 };
 
+/* ---------- mídia nas perguntas (imagem e áudio) ---------- */
+var MEDIA_MAX_CHARS=950000, AUDIO_MAX_BYTES=700*1024;
+function normMedia(m){
+  if(!m||typeof m!=='object') return null;
+  var type=m.type==='audio'?'audio':m.type==='image'?'image':null;
+  var src=typeof m.src==='string'?m.src.trim().slice(0,2000):'';
+  if(!type||!src) return null;
+  if(!/^media:[A-Za-z0-9_-]{4,64}$/.test(src)&&!/^https:\/\/\S+$/i.test(src)) return null;
+  var alt=typeof m.alt==='string'?m.alt.trim().slice(0,200):'';
+  return {type:type,src:src,alt:alt};
+}
+var mediaCache={};
+function loadMedia(src){
+  if(/^https:/i.test(src)) return Promise.resolve(src);
+  var id=src.slice(6);
+  if(mediaCache[id]) return mediaCache[id];
+  var pr=S.db?S.db.doc('media/'+id).get().then(function(s){
+    if(!s.exists) throw new Error('mídia não encontrada');
+    return s.data().data;
+  }):Promise.reject(new Error('sem conexão'));
+  mediaCache[id]=pr;
+  pr.catch(function(){delete mediaCache[id]});
+  return pr;
+}
+function preloadMedia(qs){(qs||[]).forEach(function(q){if(q&&q.media)loadMedia(q.media.src).catch(function(){})})}
+var QAudio={
+  el:null,src:null,
+  play:function(src){
+    var self=this;
+    this.stop();
+    this.src=src;
+    loadMedia(src).then(function(url){
+      if(self.src!==src) return;
+      var a=new Audio(url);self.el=a;
+      a.onended=function(){if(self.el===a){self.el=null;self.src=null;Music.duck(false);self.paint()}};
+      Music.duck(true);
+      var pr=a.play();if(pr&&pr.catch)pr.catch(function(){Music.duck(false)});
+      self.paint();
+    }).catch(function(){self.src=null;self.paint()});
+    this.paint();
+  },
+  stop:function(){
+    if(this.el){try{this.el.pause()}catch(e){}}
+    var was=!!(this.el||this.src);
+    this.el=null;this.src=null;
+    if(was){Music.duck(false);this.paint()}
+  },
+  paint:function(){
+    var self=this;
+    document.querySelectorAll('.audio-btn').forEach(function(b){
+      var on=self.src===b.getAttribute('data-src');
+      b.setAttribute('aria-pressed',String(on));
+      var t=b.querySelector('.t');if(t)t.textContent=on?'Parar áudio':'Ouvir áudio';
+    });
+  }
+};
+function mediaBlock(m,opts){
+  if(!m) return null;
+  opts=opts||{};
+  var box=h('div',{class:'qmedia '+m.type+(opts.big?' big':'')});
+  if(m.type==='image'){
+    var img=h('img',{alt:m.alt||'Imagem da pergunta',decoding:'async'});
+    box.append(img);
+    loadMedia(m.src).then(function(u){img.src=u}).catch(function(){box.replaceChildren(h('span',{class:'muted'},'Não foi possível carregar a imagem.'))});
+  }else{
+    var b=h('button',{class:'btn audio-btn','data-src':m.src,'aria-pressed':String(QAudio.src===m.src),onclick:function(){
+      if(QAudio.src===m.src) QAudio.stop(); else{Snd.init();QAudio.play(m.src)}
+    }},icon('sfxOn'),h('span',{class:'t'},QAudio.src===m.src?'Parar áudio':'Ouvir áudio'));
+    box.append(b);
+  }
+  return box;
+}
+function autoAudio(q){if(q&&q.media&&q.media.type==='audio') QAudio.play(q.media.src); else QAudio.stop()}
+
+/* editor: enviar, gravar ou colar link */
+function newMediaId(){return S.db.collection('media').doc().id}
+async function saveMediaData(type,mime,data,name){
+  if(data.length>MEDIA_MAX_CHARS) throw new Error('o arquivo continua grande demais depois de comprimido.');
+  var id=newMediaId(), now=new Date().toISOString();
+  await S.db.doc('media/'+id).set({type:type,mime:mime,data:data,name:String(name||'').slice(0,120),size:data.length,createdAt:now});
+  await S.db.doc('mediaIndex/'+id).set({type:type,size:data.length,name:String(name||'').slice(0,120),createdAt:now});
+  mediaCache[id]=Promise.resolve(data);
+  return 'media:'+id;
+}
+function compressImage(file){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      URL.revokeObjectURL(url);
+      var w=img.naturalWidth||800, hh=img.naturalHeight||600, longest=Math.max(w,hh);
+      var tries=[[1280,.82],[1024,.74],[800,.66],[640,.6]];
+      for(var i=0;i<tries.length;i++){
+        var k=Math.min(1,tries[i][0]/longest), cv=document.createElement('canvas');
+        cv.width=Math.max(1,Math.round(w*k));cv.height=Math.max(1,Math.round(hh*k));
+        var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cv.width,cv.height);cx.drawImage(img,0,0,cv.width,cv.height);
+        var d=cv.toDataURL('image/webp',tries[i][1]);
+        if(d.indexOf('data:image/webp')!==0) d=cv.toDataURL('image/jpeg',tries[i][1]);
+        if(d.length<=600000) return res(d);
+      }
+      rej(new Error('a imagem é grande demais.'));
+    };
+    img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('não consegui ler a imagem.'))};
+    img.src=url;
+  });
+}
+function fileToDataUrl(file){
+  return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(new Error('não consegui ler o arquivo.'))};r.readAsDataURL(file)});
+}
+function setMediaMsg(qi,text,bad){var el=document.getElementById('q'+qi+'-media-msg');if(el){el.textContent=text||'';el.className='msg '+(bad?'bad':'good')}}
+async function handleMediaFile(q,qi,file,kind){
+  if(!file) return;
+  try{
+    setMediaMsg(qi,kind==='image'?'Comprimindo e enviando a imagem…':'Enviando o áudio…');
+    var src;
+    if(kind==='image'){
+      if(!/^image\//.test(file.type)) throw new Error('escolha um arquivo de imagem.');
+      var d=await compressImage(file);
+      src=await saveMediaData('image',d.slice(5,d.indexOf(';')),d,file.name);
+    }else{
+      if(!/^audio\//.test(file.type)) throw new Error('escolha um arquivo de áudio (MP3, M4A, OGG ou WAV).');
+      if(file.size>AUDIO_MAX_BYTES) throw new Error('áudio grande demais ('+Math.round(file.size/1024)+' KB). O limite é 700 KB, cerca de 45 s em MP3.');
+      var a=await fileToDataUrl(file);
+      src=await saveMediaData('audio',file.type,a,file.name);
+    }
+    q.media={type:kind,src:src,alt:''};
+    rerenderKeepScroll();
+  }catch(e){setMediaMsg(qi,'Não foi possível adicionar: '+(e&&e.message||'erro desconhecido'),true)}
+}
+var Rec={mr:null,chunks:[],t0:0,timer:0,qi:null,stream:null};
+async function startRecording(q,qi){
+  if(!navigator.mediaDevices||!window.MediaRecorder){setMediaMsg(qi,'Este navegador não permite gravar áudio. Envie um arquivo.',true);return}
+  try{
+    var stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    var mime=['audio/webm;codecs=opus','audio/mp4','audio/webm','audio/ogg;codecs=opus'].filter(function(m){return MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(m)})[0]||'';
+    var mr=new MediaRecorder(stream,mime?{mimeType:mime,audioBitsPerSecond:48000}:{audioBitsPerSecond:48000});
+    Rec.mr=mr;Rec.chunks=[];Rec.qi=qi;Rec.stream=stream;Rec.t0=Date.now();
+    mr.ondataavailable=function(e){if(e.data&&e.data.size)Rec.chunks.push(e.data)};
+    mr.onstop=async function(){
+      clearInterval(Rec.timer);
+      stream.getTracks().forEach(function(t){t.stop()});
+      var blob=new Blob(Rec.chunks,{type:mr.mimeType||mime||'audio/webm'});
+      Rec.mr=null;Rec.qi=null;rerenderKeepScroll();
+      if(blob.size>AUDIO_MAX_BYTES){setMediaMsg(qi,'Gravação longa demais. Grave até 60 segundos.',true);return}
+      try{
+        setMediaMsg(qi,'Salvando a gravação…');
+        var d=await fileToDataUrl(blob);
+        q.media={type:'audio',src:await saveMediaData('audio',blob.type,d,'gravacao'),alt:''};
+        rerenderKeepScroll();
+      }catch(e){setMediaMsg(qi,'Não foi possível salvar a gravação: '+(e&&e.message||''),true)}
+    };
+    mr.start(250);
+    Rec.timer=setInterval(function(){
+      var s=Math.floor((Date.now()-Rec.t0)/1000), el=document.getElementById('q'+qi+'-rec-t');
+      if(el) el.textContent='Gravando '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+      if(s>=60) stopRecording();
+    },250);
+    rerenderKeepScroll();
+  }catch(e){setMediaMsg(qi,'Não foi possível usar o microfone. Verifique a permissão do navegador.',true)}
+}
+function stopRecording(){if(Rec.mr&&Rec.mr.state!=='inactive') Rec.mr.stop()}
+function mediaEditor(q,qi){
+  var wrap=h('div',{class:'medit'},h('span',{class:'lbl',style:'margin:0'},'Imagem ou áudio (opcional)'));
+  var msg=h('p',{class:'msg',id:'q'+qi+'-media-msg',role:'status'});
+  if(q.media){
+    var prev=h('div',{class:'mprev'},mediaBlock(q.media));
+    if(q.media.type==='image'){
+      var alt=h('input',{id:'q'+qi+'-alt',class:'in',type:'text',maxlength:'200',placeholder:'Ex.: um calendário com a data de amanhã marcada'});
+      alt.value=q.media.alt||'';
+      alt.addEventListener('input',function(){q.media.alt=alt.value});
+      prev.append(h('div',null,h('label',{class:'lbl',for:'q'+qi+'-alt'},'Descrição da imagem (para quem usa leitor de tela)'),alt));
+    }
+    wrap.append(prev,h('div',{class:'qa'},h('button',{class:'btn sm danger',onclick:function(){QAudio.stop();q.media=null;rerenderKeepScroll()}},q.media.type==='image'?'Remover imagem':'Remover áudio')));
+  }else if(Rec.qi===qi){
+    wrap.append(h('div',{class:'qa'},h('span',{class:'rec-dot','aria-hidden':'true'}),h('span',{id:'q'+qi+'-rec-t',role:'timer'},'Gravando 0:00'),h('button',{class:'btn sm danger',onclick:stopRecording},'Parar e salvar')));
+  }else if(q._link){
+    var li=h('input',{id:'q'+qi+'-link',class:'in',type:'url',placeholder:'https://…'});
+    var kind=h('select',{id:'q'+qi+'-link-kind',class:'in'},h('option',{value:'image'},'Imagem'),h('option',{value:'audio'},'Áudio'));
+    wrap.append(h('div',{class:'linkrow'},kind,li),h('div',{class:'qa'},
+      h('button',{class:'btn sm primary',onclick:function(){
+        var m=normMedia({type:kind.value,src:li.value});
+        if(!m){setMediaMsg(qi,'Cole um link que comece com https://',true);li.focus();return}
+        q.media=m;q._link=false;rerenderKeepScroll();
+      }},'Usar link'),
+      h('button',{class:'btn sm',onclick:function(){q._link=false;rerenderKeepScroll()}},'Cancelar')));
+  }else{
+    var fi=h('input',{type:'file',accept:'image/*',id:'q'+qi+'-img-file',hidden:true,onchange:function(e){handleMediaFile(q,qi,e.target.files[0],'image')}});
+    var fa=h('input',{type:'file',accept:'audio/*',id:'q'+qi+'-aud-file',hidden:true,onchange:function(e){handleMediaFile(q,qi,e.target.files[0],'audio')}});
+    wrap.append(fi,fa,h('div',{class:'qa'},
+      h('button',{class:'btn sm',onclick:function(){fi.click()}},'Enviar imagem'),
+      h('button',{class:'btn sm',onclick:function(){fa.click()}},'Enviar áudio'),
+      h('button',{class:'btn sm',onclick:function(){startRecording(q,qi)}},'Gravar áudio'),
+      h('button',{class:'btn sm ghost',onclick:function(){q._link=true;rerenderKeepScroll()}},'Colar link')),
+      h('p',{class:'muted',style:'margin:0'},'Imagens são reduzidas automaticamente. Áudio até 700 KB (cerca de 45 s em MP3) ou gravação de até 60 s.'));
+  }
+  wrap.append(msg);
+  return wrap;
+}
+async function cleanMedia(){
+  var used={};
+  S.quizzes.forEach(function(q){(q.questions||[]).forEach(function(x){if(x.media&&/^media:/.test(x.media.src))used[x.media.src.slice(6)]=1})});
+  if(S.draft) (S.draft.questions||[]).forEach(function(x){if(x.media&&/^media:/.test(x.media.src))used[x.media.src.slice(6)]=1});
+  var idx=await S.db.collection('mediaIndex').get(), n=0, bytes=0;
+  for(var i=0;i<idx.docs.length;i++){
+    var d=idx.docs[i];
+    if(used[d.id]) continue;
+    bytes+=(d.data().size||0);
+    await S.db.doc('media/'+d.id).delete();
+    await S.db.doc('mediaIndex/'+d.id).delete();
+    n++;
+  }
+  return {n:n,kb:Math.round(bytes/1024)};
+}
+
 /* ---------- validação e formato dos quizzes (esquema 2) ---------- */
 function numOr(v,min,max,fallback){
   return (typeof v==='number'&&isFinite(v)&&v>=min&&v<=max)?Math.round(v):fallback;
@@ -605,6 +819,8 @@ function normalize(raw){
     var item={q:q,options:opts,answer:r.answer,explain:str(r.explain,600),double:r.double===true};
     var hint=str(r.hint,300);
     if(hint) item.hint=hint;
+    var md=normMedia(r.media);
+    if(md) item.media=md;
     var tm=numOr(r.time,0,300,null);
     if(tm!==null) item.time=tm;
     qs.push(item);
@@ -616,7 +832,7 @@ function plain(q){
     timeLimit:numOr(q.timeLimit,0,300,null),
     questions:(q.questions||[]).map(function(x){return {
       q:x.q||'',options:(x.options||[]).map(String),answer:Number.isInteger(x.answer)?x.answer:0,explain:x.explain||'',
-      time:numOr(x.time,0,300,null),double:x.double===true,hint:x.hint||''
+      time:numOr(x.time,0,300,null),double:x.double===true,hint:x.hint||'',media:normMedia(x.media)
     }})};
 }
 
@@ -629,7 +845,7 @@ function leave(){
 }
 function go(view){
   if(S.view==='play'&&view!=='play') stopGame();
-  if(view!==S.view) Confetti.stop();
+  if(view!==S.view){Confetti.stop();QAudio.stop()}
   if((S.view==='host'||S.view==='player')&&view!==S.view) liveStop();
   if(S.view==='admin'&&view!=='admin') stopPreview();
   S.view=view;render();window.scrollTo(0,0);
@@ -840,7 +1056,7 @@ function validQs(quiz){
 function buildQs(quiz,practice){
   var def=numOr(quiz.timeLimit,0,300,defTime());
   var qs=validQs(quiz).map(function(x){
-    return {q:x.q,explain:x.explain||'',hint:x.hint||'',double:x.double===true,limit:practice?0:numOr(x.time,0,300,def),
+    return {q:x.q,explain:x.explain||'',hint:x.hint||'',media:normMedia(x.media),double:x.double===true,limit:practice?0:numOr(x.time,0,300,def),
       options:x.options.map(function(t,j){return {t:String(t),ok:j===x.answer}})};
   });
   if(S.shuffle){qs=shuffle(qs);qs.forEach(function(x){x.options=shuffle(x.options)})}
@@ -986,6 +1202,7 @@ function beginGame(){
   store.set('cq:name',p.name);
   Snd.init();Snd.click();Snd.musicStop();
   p.qs=buildQs(p.quiz,p.practice);
+  preloadMedia(p.qs);
   p.i=0;p.score=0;p.prevScore=0;p.streak=0;p.bestStreak=0;p.correct=0;p.times=[];p.misses=[];
   if(!cfg('countdown')){Snd.go();beginQuestion();return}
   p.phase='countdown';p.count=3;
@@ -1016,6 +1233,7 @@ function beginQuestion(){
   render();window.scrollTo(0,0);
   var f=app.querySelector('[data-focus]');if(f)f.focus({preventScroll:true});
   Snd.whoosh();Snd.musicStart();
+  autoAudio(p.qs[p.i]);
   S.raf=requestAnimationFrame(loop);
 }
 function ringEl(secs){
@@ -1040,6 +1258,7 @@ function viewQuestion(p){
     timed?ringEl(q.limit):null,
     h('div',{class:'qbody'},
       q.double?h('span',{class:'tag'},'Pontos ×2'):null,
+      mediaBlock(q.media),
       h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(q,false)),
       hintBlock(q.hint,p.hintShown,function(){p.hintShown=true;Snd.click();render()}))));
   root.append(h('div',{class:'tiles'},q.options.map(function(o,i){return tile(o,i,null,false)})));
@@ -1080,7 +1299,7 @@ function tile(o,i,state,answered){
 function answer(i){
   var p=S.play;
   if(!p||p.phase!=='question') return;
-  cancelAnimationFrame(S.raf);Snd.musicStop();
+  cancelAnimationFrame(S.raf);Snd.musicStop();QAudio.stop();
   var q=p.qs[p.i];
   var used=Math.min(performance.now()-p.t0,p.limitMs>0?p.limitMs:Infinity);
   var ok=i>=0&&q.options[i].ok;
@@ -1112,6 +1331,7 @@ function viewReveal(p){
   root.append(gameBar(p,true));
   root.append(h('div',{class:'qcard'},h('div',{class:'qbody'},
     q.double?h('span',{class:'tag'},'Pontos ×2'):null,
+    mediaBlock(q.media),
     h('h2',{class:'qtext'},qText(q,true)))));
   root.append(h('div',{class:'tiles'},q.options.map(function(o,i){
     return tile(o,i,o.ok?'correct':(i===p.picked?'wrong':'faded'),true);
@@ -1176,7 +1396,7 @@ function retryMisses(p){
   var base=p.origQuiz||p.quiz;
   var qs=p.misses.map(function(m){
     var q=m.q;
-    return {q:q.q,options:q.options.map(function(o){return o.t}),answer:q.options.findIndex(function(o){return o.ok}),explain:q.explain||'',hint:q.hint||'',double:q.double===true};
+    return {q:q.q,options:q.options.map(function(o){return o.t}),answer:q.options.findIndex(function(o){return o.ok}),explain:q.explain||'',hint:q.hint||'',media:q.media||null,double:q.double===true};
   });
   var sub={id:base.id,title:base.title,level:base.level,timeLimit:0,questions:qs};
   startPlay(sub,{retry:true});
@@ -1279,7 +1499,7 @@ function qText(q,filled){
 }
 
 /* ---------- editor ---------- */
-function blankQ(){return {q:'',options:['','','',''],answer:0,explain:'',time:null,double:false,hint:''}}
+function blankQ(){return {q:'',options:['','','',''],answer:0,explain:'',time:null,double:false,hint:'',media:null}}
 function openEditor(q){
   S.draft=q?plain(q):{title:'',subject:'',level:'',description:'',timeLimit:null,questions:[blankQ()]};
   S.draftId=q?q.id:null;S.confirmDelete=false;S.saving=false;
@@ -1329,6 +1549,7 @@ function qEditor(q,qi){
   return h('div',{class:'qedit'},
     head,
     field('Texto da pergunta (use ___ para cada lacuna)','q'+qi+'-text',q,'q',{area:true,rows:2,max:400,ph:'Amanhã eu ___ (falar) com o professor.'}),
+    mediaEditor(q,qi),
     h('p',{class:'muted',style:'margin-top:-6px'},'Com duas ou mais lacunas, separe as partes da resposta com “ - ”, por exemplo: éramos - tínhamos.'),
     h('div',{role:'radiogroup','aria-label':'Opções da pergunta '+(qi+1)},
       h('span',{class:'lbl opts-label'},'Opções (marque a certa)'),
@@ -1523,7 +1744,7 @@ function liveTimeSelect(H){
 async function hostCreate(quiz){
   S.libMsg='';resetMusicPicks();
   var qs=buildQs(quiz).map(function(x){
-    return {q:x.q,explain:x.explain,hint:x.hint||'',double:x.double,limit:x.limit,options:x.options.map(function(o){return o.t}),answer:x.options.findIndex(function(o){return o.ok})};
+    return {q:x.q,explain:x.explain,hint:x.hint||'',media:x.media||null,double:x.double,limit:x.limit,options:x.options.map(function(o){return o.t}),answer:x.options.findIndex(function(o){return o.ok})};
   });
   if(!qs.length) return;
   var pin=null;
@@ -1539,6 +1760,7 @@ async function hostCreate(quiz){
   await S.db.doc('games/'+pin).set(game);
   store.set('cq:hostPin',pin);
   hostOpen(pin,qs,game);
+  preloadMedia(qs);
 }
 async function hostResume(){
   var r=S.hostResume;if(!r) return;
@@ -1591,7 +1813,7 @@ async function hostNextQuestion(){
     var i=H.i+1, q=H.qs[i];
     H.answers={};
     var lim=liveLimit(H,q);
-    await hostSet({status:'question',i:i,q:{text:q.q,options:q.options,limit:lim,double:q.double,hint:q.hint||''},reveal:null});
+    await hostSet({status:'question',i:i,q:{text:q.q,options:q.options,limit:lim,double:q.double,hint:q.hint||'',media:q.media||null},reveal:null});
     H.i=i;H.status='question';H.curLimit=lim;H.limitMs=lim*1000;H.t0=performance.now();H.lastSec=-1;H.reveal=null;
     if(H.ansUnsub) H.ansUnsub();
     H.ansUnsub=sub(S.db.collection('games/'+H.pin+'/answers').where('q','==',i).onSnapshot(function(snap){
@@ -1604,6 +1826,7 @@ async function hostNextQuestion(){
     },function(){}));
     render();window.scrollTo(0,0);
     Snd.whoosh();Snd.musicStart();
+    autoAudio(q);
     cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(hostLoop);
   }catch(e){hostErr(e)}
   finally{H.busy=false}
@@ -1634,7 +1857,7 @@ function hostLoop(){
 async function hostReveal(){
   var H=S.host;if(!H||H.status!=='question'||H.revealing) return;
   H.revealing=true;
-  cancelAnimationFrame(S.raf);Snd.musicStop();
+  cancelAnimationFrame(S.raf);Snd.musicStop();QAudio.stop();
   if(H.ansUnsub){H.ansUnsub();H.ansUnsub=null}
   var q=H.qs[H.i], counts=q.options.map(function(){return 0}), writes=[];
   Object.keys(H.players).forEach(function(pid){
@@ -1749,6 +1972,7 @@ function hostQuestion(H){
     timed?ringEl(ringSecs):null,
     h('div',{class:'qbody'},
       q.double?h('span',{class:'tag'},'Pontos ×2'):null,
+      mediaBlock(q.media,{big:true}),
       h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(q.q,q.options,q.answer),false)))));
   root.append(h('div',{class:'tiles'},q.options.map(function(t,i){return staticTile(t,i,null)})));
   root.append(h('div',{class:'footbar'},
@@ -1764,7 +1988,7 @@ function hostRevealView(H){
   var right=(rv.counts||[])[q.answer]||0;
   var root=h('div',{class:'game stack'});
   root.append(liveBar(h('span',{class:'chip'},(H.i+1)+' / '+H.qs.length),H.title,hostExitNode(H)));
-  root.append(h('div',{class:'qcard'},h('div',{class:'qbody'},h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(q.q,q.options,q.answer),true)))));
+  root.append(h('div',{class:'qcard'},h('div',{class:'qbody'},mediaBlock(q.media,{big:true}),h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(q.q,q.options,q.answer),true)))));
   root.append(h('div',{class:'gcard'},
     h('div',{class:'dist',role:'img','aria-label':'Respostas: '+q.options.map(function(t,i){return t+' '+((rv.counts||[])[i]||0)}).join(', ')},
       q.options.map(function(t,i){
@@ -2015,6 +2239,7 @@ function viewPlayer(){
       (g.q.limit||0)>0?ringEl(g.q.limit):null,
       h('div',{class:'qbody'},
         g.q.double?h('span',{class:'tag'},'Pontos ×2'):null,
+        mediaBlock(normMedia(g.q.media)),
         h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(g.q.text,g.q.options,-1),false)),
         hintBlock(g.q.hint,J.hintShown,function(){J.hintShown=true;Snd.click();render()}))));
     root.append(h('div',{class:'tiles'},(g.q.options||[]).map(function(t,i){
@@ -2164,7 +2389,11 @@ function viewAdmin(){
   root.append(h('section',{class:'panel stack','aria-labelledby':'live-h'},
     h('h3',{class:'lbl',id:'live-h',style:'margin:0'},'Jogos ao vivo'),
     h('p',{class:'muted'},'Cada jogo ao vivo armazena jogadores, respostas e pontos. Exclua os jogos encerrados de vez em quando para manter a página leve.'),
-    h('div',null,h('button',{class:'btn',onclick:function(){
+    h('div',{class:'qa'},h('button',{class:'btn',onclick:function(){
+      adminDo(async function(){var r=await cleanMedia();S.adminMediaR=r},'Mídias sem uso excluídas.').then(function(){
+        var r=S.adminMediaR;if(r) setAdminMsg(r.n?plural(r.n,'mídia sem uso excluída','mídias sem uso excluídas')+' ('+r.kb+' KB liberados).':'Não havia mídias sem uso.',false);
+      });
+    }},'Excluir mídias sem uso'),h('button',{class:'btn',onclick:function(){
       adminDo(async function(){var n=await cleanGames();S.adminCleanN=n},'Jogos encerrados excluídos.').then(function(){
         if(S.adminCleanN!=null) setAdminMsg(S.adminCleanN?plural(S.adminCleanN,'jogo encerrado excluído.','jogos encerrados excluídos.'):'Não havia jogos encerrados.',false);
       });
