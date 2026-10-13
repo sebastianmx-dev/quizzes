@@ -49,6 +49,15 @@ Os e-mails dos gestores ficam só no seu banco de dados e não aparecem no códi
 2. Os alunos leem o QR com a câmera do celular (ou abrem o site e digitam o PIN), escrevem o nome, escolhem um avatar e entram.
 3. Clique em **Começar**. A resposta aparece quando todos respondem ou quando o tempo acaba.
 
+## Recursos didáticos
+- **Dica por pergunta**: no editor, cada pergunta pode ter uma dica opcional. O aluno pode abri-la durante a pergunta (no jogo individual e no celular, ao vivo); se acertar, ganha metade dos pontos.
+- **Modo treino**: na entrada do jogo individual, marque “Modo treino” para jogar sem cronômetro, com explicação em todas as perguntas e sem enviar a pontuação para a tabela.
+- **Treinar os erros**: no fim do jogo individual, o botão repete só as perguntas que o aluno errou, em modo treino.
+- **Relatório da turma**: no fim do jogo ao vivo, o anfitrião vê o acerto de cada pergunta (as abaixo de 50% aparecem com “Rever”), as dicas usadas e o desempenho de cada aluno, e pode baixar tudo em CSV (abre no Excel ou no Google Planilhas).
+- **Duplicar quiz**: em Gestão, cria uma cópia oculta para você ajustar antes de mostrar aos alunos.
+
+No JSON de importação, a dica é o campo `"hint"` de cada pergunta.
+
 ## Música
 As músicas ficam na pasta `audio/` e mudam conforme o momento do jogo: **sala de espera**, **perguntas** (acelera nos últimos 5 segundos) e **pódio**. Em **Gestão → Regras do jogo → Música** você escolhe, para cada momento, uma faixa específica, uma aleatória, a música gerada pelo navegador (só nas perguntas) ou nenhuma, e pode ouvir antes de salvar. No jogo ao vivo, a música toca só na tela do anfitrião.
 

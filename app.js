@@ -603,6 +603,8 @@ function normalize(raw){
     if(opts.length<2||opts.length>6||opts.some(function(o){return !o})) return {ok:false,error:'a pergunta '+n+' precisa de 2 a 6 opções preenchidas ("options").'};
     if(!Number.isInteger(r.answer)||r.answer<0||r.answer>=opts.length) return {ok:false,error:'na pergunta '+n+', "answer" deve ser o índice da opção certa (0 a '+(opts.length-1)+').'};
     var item={q:q,options:opts,answer:r.answer,explain:str(r.explain,600),double:r.double===true};
+    var hint=str(r.hint,300);
+    if(hint) item.hint=hint;
     var tm=numOr(r.time,0,300,null);
     if(tm!==null) item.time=tm;
     qs.push(item);
@@ -614,7 +616,7 @@ function plain(q){
     timeLimit:numOr(q.timeLimit,0,300,null),
     questions:(q.questions||[]).map(function(x){return {
       q:x.q||'',options:(x.options||[]).map(String),answer:Number.isInteger(x.answer)?x.answer:0,explain:x.explain||'',
-      time:numOr(x.time,0,300,null),double:x.double===true
+      time:numOr(x.time,0,300,null),double:x.double===true,hint:x.hint||''
     }})};
 }
 
@@ -741,7 +743,7 @@ function toolsPanel(){
   var msg=h('p',{id:'tools-msg',class:'msg '+(S.toolsBad?'bad':'good'),role:'status'},S.toolsMsg);
   return h('div',{class:'panel stack'},
     h('div',null,h('label',{class:'lbl',for:'tools-text'},'JSON dos quizzes'),ta),
-    h('p',{class:'muted'},'Aceita um quiz, uma lista de quizzes ou {"quizzes":[…]}. “answer” é o índice da opção certa, a começar em 0. “timeLimit” e “time” são segundos (0 = sem limite) e “double” dobra os pontos da pergunta.'),
+    h('p',{class:'muted'},'Aceita um quiz, uma lista de quizzes ou {"quizzes":[…]}. “answer” é o índice da opção certa, a começar em 0. “timeLimit” e “time” são segundos (0 = sem limite), “double” dobra os pontos da pergunta e “hint” é uma dica opcional.'),
     h('div',{class:'qa'},
       h('button',{class:'btn',onclick:function(){
         S.toolsText=JSON.stringify({quizzes:S.quizzes.map(plain)},null,2);ta.value=S.toolsText;
@@ -792,22 +794,24 @@ function validQs(quiz){
     return x&&x.q&&Array.isArray(x.options)&&x.options.length>=2&&Number.isInteger(x.answer)&&x.answer>=0&&x.answer<x.options.length;
   });
 }
-function buildQs(quiz){
+function buildQs(quiz,practice){
   var def=numOr(quiz.timeLimit,0,300,defTime());
   var qs=validQs(quiz).map(function(x){
-    return {q:x.q,explain:x.explain||'',double:x.double===true,limit:numOr(x.time,0,300,def),
+    return {q:x.q,explain:x.explain||'',hint:x.hint||'',double:x.double===true,limit:practice?0:numOr(x.time,0,300,def),
       options:x.options.map(function(t,j){return {t:String(t),ok:j===x.answer}})};
   });
   if(S.shuffle){qs=shuffle(qs);qs.forEach(function(x){x.options=shuffle(x.options)})}
   return qs;
 }
-function startPlay(quiz){
+function startPlay(quiz,opts){
+  opts=opts||{};
   var n=validQs(quiz).length;
   if(!n) return;
-  var p={quiz:quiz,nq:n,phase:'lobby',name:store.get('cq:name')||'',qs:[],i:0,picked:null,
+  var p={quiz:quiz,nq:n,phase:'lobby',retry:!!opts.retry,practice:!!opts.retry||store.get('cq:practice')==='1',name:store.get('cq:name')||'',qs:[],i:0,picked:null,
     score:0,prevScore:0,streak:0,prevStreak:0,bestStreak:0,correct:0,times:[],misses:[],
     gain:0,bonus:0,confirmExit:false,board:null,rank:null,saved:null,myId:null,limitMs:0,t0:0,count:3};
   S.play=p;
+  Confetti.stop();
   go('play');
   resetMusicPicks();Snd.init();Snd.musicStart('lobby');
   loadBoard(quiz.id).then(function(b){
@@ -909,12 +913,13 @@ function viewLobby(p){
   root.append(gameBar(p,false));
   root.append(h('div',{class:'gcard'},
     h('div',null,
+      p.retry?h('span',{class:'tag'},'Treinar os erros'):null,
       h('h2',{class:'qtext',tabindex:'-1','data-focus':''},p.quiz.title||'Quiz'),
       h('div',{class:'meta',style:'margin-top:8px'},
         h('span',null,plural(p.nq,'pergunta','perguntas')),
-        h('span',null,timeLabel(tl)),
+        h('span',null,p.practice?'sem cronômetro':timeLabel(tl)),
         p.quiz.level?h('span',null,'Nível '+p.quiz.level):null)),
-    h('p',null,(tl>0&&cfg('minPct')<100?'Responda rápido: acertar nos primeiros segundos vale até '+fmt(cfg('maxPoints'))+' pontos.':'Cada resposta certa vale '+fmt(cfg('maxPoints'))+' pontos.')+(cfg('streakStep')>0?' Acertar seguido dá bônus.':'')),
+    p.practice?h('p',null,p.retry?'Só as perguntas que você errou, sem cronômetro e com explicação em cada uma. A pontuação não vai para a tabela.':'Modo treino: sem cronômetro, com explicação em cada pergunta. A pontuação não vai para a tabela.'):h('p',null,(tl>0&&cfg('minPct')<100?'Responda rápido: acertar nos primeiros segundos vale até '+fmt(cfg('maxPoints'))+' pontos.':'Cada resposta certa vale '+fmt(cfg('maxPoints'))+' pontos.')+(cfg('streakStep')>0?' Acertar seguido dá bônus.':'')),
     h('div',{class:'ident'},
       h('div',{class:'ident-av'},avSvg(S.avatar,88)),
       h('div',{class:'ident-main'},
@@ -924,9 +929,10 @@ function viewLobby(p){
     h('div',{class:'stack',style:'gap:10px'},
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-sfx',checked:Snd.sfx,onchange:function(e){Snd.sfx=e.target.checked;store.set('cq:sfx',Snd.sfx?'1':'0');Snd.init();if(Snd.sfx)Snd.click()}}),'Efeitos sonoros'),
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-music',checked:Snd.music,onchange:function(e){Snd.music=e.target.checked;store.set('cq:music',Snd.music?'1':'0');Snd.init();if(!Snd.music)Snd.silence();else if(Snd.phase)Snd.musicStart(Snd.phase)}}),'Música'),
+      p.retry?null:h('label',{class:'check'},h('input',{type:'checkbox',id:'o-practice',checked:p.practice,onchange:function(e){p.practice=e.target.checked;store.set('cq:practice',p.practice?'1':'0');rerenderKeepScroll()}}),'Modo treino (sem cronômetro e sem tabela)'),
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-shuffle',checked:S.shuffle,onchange:function(e){S.shuffle=e.target.checked;store.set('cq:shuffle',S.shuffle?'1':'0')}}),'Embaralhar perguntas e opções')),
     h('div',null,h('button',{class:'btn go big',onclick:beginGame},'Começar'))));
-  if(cfg('leaderboard')) root.append(h('div',{class:'gcard'},
+  if(cfg('leaderboard')&&!p.practice) root.append(h('div',{class:'gcard'},
     h('h3',{class:'lbl',style:'margin:0'},'Melhores pontuações'),
     h('div',{id:'lobby-board'},p.board?boardList(p.board,null,5,'Ninguém jogou ainda. Seja o primeiro na tabela.'):h('p',{class:'muted'},'Carregando a tabela…'))));
   return root;
@@ -936,7 +942,7 @@ function beginGame(){
   p.name=((nick?nick.value:p.name)||'').trim().slice(0,16)||'Jogador';
   store.set('cq:name',p.name);
   Snd.init();Snd.click();Snd.musicStop();
-  p.qs=buildQs(p.quiz);
+  p.qs=buildQs(p.quiz,p.practice);
   p.i=0;p.score=0;p.prevScore=0;p.streak=0;p.bestStreak=0;p.correct=0;p.times=[];p.misses=[];
   if(!cfg('countdown')){Snd.go();beginQuestion();return}
   p.phase='countdown';p.count=3;
@@ -961,7 +967,7 @@ function viewCountdown(p){
 }
 function beginQuestion(){
   var p=S.play;
-  p.phase='question';p.picked=null;p.confirmExit=false;
+  p.phase='question';p.picked=null;p.confirmExit=false;p.hintShown=false;p.usedHint=false;
   p.limitMs=p.qs[p.i].limit*1000;
   p.t0=performance.now();p.lastSec=-1;
   render();window.scrollTo(0,0);
@@ -991,9 +997,15 @@ function viewQuestion(p){
     timed?ringEl(q.limit):null,
     h('div',{class:'qbody'},
       q.double?h('span',{class:'tag'},'Pontos ×2'):null,
-      h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(q,false)))));
+      h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(q,false)),
+      hintBlock(q.hint,p.hintShown,function(){p.hintShown=true;Snd.click();render()}))));
   root.append(h('div',{class:'tiles'},q.options.map(function(o,i){return tile(o,i,null,false)})));
   return root;
+}
+function hintBlock(hint,shown,onShow){
+  if(!hint) return null;
+  if(shown) return h('div',{class:'hint',role:'note'},h('b',null,'Dica: '),hint);
+  return h('div',null,h('button',{class:'btn sm hint-btn',id:'hint-btn',onclick:onShow},'Ver dica (vale metade dos pontos)'));
 }
 function loop(){
   var p=S.play;
@@ -1034,6 +1046,7 @@ function answer(i){
     var frac=p.limitMs>0?Math.min(1,used/p.limitMs):0;
     var base=Math.round(cfg('maxPoints')*(1-frac*(1-cfg('minPct')/100)));
     if(q.double) base*=2;
+    if(p.hintShown){base=Math.round(base/2);p.usedHint=true}
     p.streak++;
     var step=cfg('streakStep');
     p.bonus=p.streak>=2&&step>0?Math.min((p.streak-1)*step,cfg('streakCap')):0;
@@ -1064,11 +1077,12 @@ function viewReveal(p){
     h('div',{class:'head'},ok?'Certo!':(p.picked<0?'Tempo esgotado':'Não foi essa.')),
     ok?h('div',{class:'gain'},'+'+fmt(p.gain)):null,
     ok&&q.double?h('div',{class:'note'},'Pontos a dobrar aplicados.'):null,
+    ok&&p.usedHint?h('div',{class:'note'},'Você usou a dica: metade dos pontos.'):null,
     ok&&p.bonus?h('div',{class:'streak'},icon('flame',20),'Sequência de '+p.streak+': +'+p.bonus+' de bônus'):null,
     ok&&!p.bonus&&p.streak===1?h('div',{class:'note'},'Acerte a próxima para começar uma sequência.'):null,
     ok?null:h('div',null,'Resposta certa: ',h('b',null,correctOf(q))),
     !ok&&p.prevStreak>=2?h('div',{class:'note'},'Você perdeu a sequência de '+p.prevStreak+'.'):null,
-    q.explain&&cfg('showExplain')?h('div',{class:'expl'},q.explain):null,
+    q.explain&&(cfg('showExplain')||p.practice)?h('div',{class:'expl'},q.explain):null,
     h('div',{class:'footbar'},h('button',{class:'btn primary big',id:'next-btn',onclick:next},last?'Ver resultado':'Próxima'))));
   return root;
 }
@@ -1083,8 +1097,8 @@ function next(){
 function finish(){
   var p=S.play;
   p.phase='done';p.confirmExit=false;p.board=null;
-  var cur=bestOf(p.quiz.id);
-  if(!cur||cur.points==null||p.score>cur.points) store.set('cq:best:'+p.quiz.id,JSON.stringify({points:p.score,score:p.correct,total:p.qs.length}));
+  var cur=p.practice?null:bestOf(p.quiz.id);
+  if(!p.practice&&(!cur||cur.points==null||p.score>cur.points)) store.set('cq:best:'+p.quiz.id,JSON.stringify({points:p.score,score:p.correct,total:p.qs.length}));
   render();window.scrollTo(0,0);
   var f=app.querySelector('[data-focus]');if(f)f.focus({preventScroll:true});
   playWinner(p.correct/p.qs.length);
@@ -1092,7 +1106,7 @@ function finish(){
   saveScore(p);
 }
 async function saveScore(p){
-  if(!cfg('leaderboard')) return;
+  if(!cfg('leaderboard')||p.practice) return;
   var path='quizzes/'+p.quiz.id+'/scores';
   var avg=p.times.length?Math.round(p.times.reduce(function(a,b){return a+b},0)/p.times.length):0;
   try{
@@ -1115,6 +1129,16 @@ async function saveScore(p){
   if(S.play===p&&p.phase==='done') render();
 }
 function ordinal(n){return n+'º'}
+function retryMisses(p){
+  var base=p.origQuiz||p.quiz;
+  var qs=p.misses.map(function(m){
+    var q=m.q;
+    return {q:q.q,options:q.options.map(function(o){return o.t}),answer:q.options.findIndex(function(o){return o.ok}),explain:q.explain||'',hint:q.hint||'',double:q.double===true};
+  });
+  var sub={id:base.id,title:base.title,level:base.level,timeLimit:0,questions:qs};
+  startPlay(sub,{retry:true});
+  if(S.play) S.play.origQuiz=base;
+}
 function viewDone(p){
   var n=p.qs.length, acc=Math.round(p.correct/n*100);
   var avg=p.times.length?p.times.reduce(function(a,b){return a+b},0)/p.times.length/1000:0;
@@ -1125,6 +1149,7 @@ function viewDone(p){
     h('h2',{class:'final','data-focus':'',tabindex:'-1'},
       avSvg(S.avatar,96),
       h('span',{class:'who'},p.name||'Jogador'),
+      p.practice?h('span',{class:'tag'},p.retry?'Treino dos erros':'Modo treino'):null,
       h('span',{class:'big-score'},fmt(p.score)),
       h('span',{class:'muted'},'pontos'),
       rankText?h('span',{class:'rank'},rankText):null),
@@ -1134,7 +1159,7 @@ function viewDone(p){
     h('div',{class:'stat'},h('b',null,acc+'%'),h('span',null,'Precisão')),
     h('div',{class:'stat'},h('b',null,p.times.length?avg.toFixed(1)+' s':'—'),h('span',null,'Tempo médio')),
     h('div',{class:'stat'},h('b',null,String(p.bestStreak)),h('span',null,'Maior sequência'))));
-  if(cfg('leaderboard')) root.append(h('div',{class:'gcard'},
+  if(cfg('leaderboard')&&!p.practice) root.append(h('div',{class:'gcard'},
     h('h3',{class:'lbl',style:'margin:0'},'Tabela do quiz'),
     p.board===null&&p.saved===null?h('p',{class:'muted'},'Carregando a tabela…'):tableBlock(p)));
   if(p.misses.length){
@@ -1148,7 +1173,8 @@ function viewDone(p){
     })));
   }
   root.append(h('div',{class:'footbar'},
-    h('button',{class:'btn go big',onclick:function(){startPlay(p.quiz)}},'Jogar de novo'),
+    p.misses.length?h('button',{class:'btn go big',id:'retry-btn',onclick:function(){retryMisses(p)}},'Treinar os erros ('+p.misses.length+')'):null,
+    h('button',{class:p.misses.length?'btn wh big':'btn go big',onclick:function(){startPlay(p.retry?p.origQuiz||p.quiz:p.quiz)}},p.retry?'Jogar o quiz completo':'Jogar de novo'),
     h('button',{class:'btn wh big',onclick:leave},'Biblioteca')));
   return root;
 }
@@ -1210,7 +1236,7 @@ function qText(q,filled){
 }
 
 /* ---------- editor ---------- */
-function blankQ(){return {q:'',options:['','','',''],answer:0,explain:'',time:null,double:false}}
+function blankQ(){return {q:'',options:['','','',''],answer:0,explain:'',time:null,double:false,hint:''}}
 function openEditor(q){
   S.draft=q?plain(q):{title:'',subject:'',level:'',description:'',timeLimit:null,questions:[blankQ()]};
   S.draftId=q?q.id:null;S.confirmDelete=false;S.saving=false;
@@ -1275,7 +1301,8 @@ function qEditor(q,qi){
     h('div',{class:'grid2'},
       selectField('Tempo desta pergunta','q'+qi+'-time',q.time==null?'':q.time,[['','Padrão do quiz']].concat(TIMES),function(v){q.time=v===''?null:+v}),
       h('label',{class:'check'},h('input',{type:'checkbox',id:'q'+qi+'-dbl',checked:q.double===true,onchange:function(e){q.double=e.target.checked}}),'Pontos a dobrar (×2)')),
-    field('Explicação (aparece depois de responder)','q'+qi+'-explain',q,'explain',{area:true,rows:2,max:600,ph:'Por que esta é a resposta certa.'}));
+    field('Explicação (aparece depois de responder)','q'+qi+'-explain',q,'explain',{area:true,rows:2,max:600,ph:'Por que esta é a resposta certa.'}),
+    field('Dica (opcional; quem usar ganha metade dos pontos)','q'+qi+'-hint',q,'hint',{max:300,ph:'Uma pista que ajude sem entregar a resposta.'}));
 }
 function setEditorErr(t){var el=document.getElementById('editor-err');if(el)el.textContent=t||''}
 function viewEditor(){
@@ -1389,10 +1416,11 @@ function liveStop(){
   S.liveUnsubs=[];
 }
 function sub(u){(S.liveUnsubs=S.liveUnsubs||[]).push(u);return u}
-function pointsFor(ms,limitSec,dbl,streak){
+function pointsFor(ms,limitSec,dbl,streak,hint){
   var frac=limitSec>0?Math.min(1,ms/(limitSec*1000)):0;
   var base=Math.round(cfg('maxPoints')*(1-frac*(1-cfg('minPct')/100)));
   if(dbl) base*=2;
+  if(hint) base=Math.round(base/2);
   var step=cfg('streakStep');
   var bonus=streak>=2&&step>0?Math.min((streak-1)*step,cfg('streakCap')):0;
   return {base:base,bonus:bonus,total:base+bonus};
@@ -1452,7 +1480,7 @@ function liveTimeSelect(H){
 async function hostCreate(quiz){
   S.libMsg='';resetMusicPicks();
   var qs=buildQs(quiz).map(function(x){
-    return {q:x.q,explain:x.explain,double:x.double,limit:x.limit,options:x.options.map(function(o){return o.t}),answer:x.options.findIndex(function(o){return o.ok})};
+    return {q:x.q,explain:x.explain,hint:x.hint||'',double:x.double,limit:x.limit,options:x.options.map(function(o){return o.t}),answer:x.options.findIndex(function(o){return o.ok})};
   });
   if(!qs.length) return;
   var pin=null;
@@ -1520,7 +1548,7 @@ async function hostNextQuestion(){
     var i=H.i+1, q=H.qs[i];
     H.answers={};
     var lim=liveLimit(H,q);
-    await hostSet({status:'question',i:i,q:{text:q.q,options:q.options,limit:lim,double:q.double},reveal:null});
+    await hostSet({status:'question',i:i,q:{text:q.q,options:q.options,limit:lim,double:q.double,hint:q.hint||''},reveal:null});
     H.i=i;H.status='question';H.curLimit=lim;H.limitMs=lim*1000;H.t0=performance.now();H.lastSec=-1;H.reveal=null;
     if(H.ansUnsub) H.ansUnsub();
     H.ansUnsub=sub(S.db.collection('games/'+H.pin+'/answers').where('q','==',i).onSnapshot(function(snap){
@@ -1571,7 +1599,7 @@ async function hostReveal(){
     var choice=a&&Number.isInteger(a.choice)&&a.choice>=0&&a.choice<q.options.length?a.choice:-1;
     if(choice>=0) counts[choice]++;
     var ok=choice===q.answer, streak=ok?(prev.streak||0)+1:0;
-    var pts=ok?pointsFor(Math.max(0,+a.ms||0),H.curLimit,q.double,streak):{total:0,bonus:0};
+    var pts=ok?pointsFor(Math.max(0,+a.ms||0),H.curLimit,q.double,streak,a&&a.hint===true):{total:0,bonus:0};
     var doc={name:String(pl.name||'Jogador').slice(0,16),avatar:typeof pl.avatar==='string'?pl.avatar.slice(0,40):'',
       score:(prev.score||0)+pts.total,streak:streak,correct:(prev.correct||0)+(ok?1:0),
       last:{i:H.i,ok:ok,points:pts.total,bonus:pts.bonus,choice:choice}};
@@ -1579,6 +1607,10 @@ async function hostReveal(){
     writes.push(S.db.doc('games/'+H.pin+'/scores/'+pid).set(doc));
   });
   H.reveal={correct:q.answer,counts:counts,explain:cfg('showExplain')?(q.explain||''):''};
+  H.stats=H.stats||[];
+  var nPl=Object.keys(H.players).length, nAns=counts.reduce(function(a,b){return a+b},0);
+  H.stats[H.i]={q:q.q,correct:q.options[q.answer],right:counts[q.answer]||0,answered:nAns,total:nPl,
+    hints:Object.keys(H.answers).filter(function(pid){return H.answers[pid]&&H.answers[pid].hint===true}).length};
   try{
     await Promise.all(writes);
     await hostSet({status:'reveal',reveal:H.reveal});
@@ -1725,8 +1757,62 @@ function hostEndView(H){
   root.append(h('div',{class:'gcard'},
     h('h2',{class:'h2',tabindex:'-1','data-focus':''},'Pódio'),
     list.length?podiumBlock(list,null,H):h('p',{class:'muted'},'Ninguém pontuou neste jogo.')));
+  root.append(reportCard(H,list));
   root.append(h('div',{class:'footbar'},h('button',{class:'btn wh big',onclick:function(){S.host=null;go('library')}},'Biblioteca')));
   return root;
+}
+function pctClass(p){return p>=70?'ok':p>=40?'mid':'low'}
+function reportCard(H,list){
+  var stats=(H.stats||[]).map(function(st,i){return st?Object.assign({n:i+1},st):null}).filter(Boolean);
+  var nq=H.qs.length;
+  var avg=stats.length?Math.round(stats.reduce(function(a,st){return a+(st.total?st.right/st.total:0)},0)/stats.length*100):null;
+  var hard=stats.filter(function(st){return st.total&&st.right/st.total<.5});
+  var card=h('section',{class:'gcard report','aria-labelledby':'rep-h'},
+    h('div',{class:'bar'},
+      h('h2',{class:'h2',id:'rep-h'},'Relatório da turma'),
+      h('button',{class:'btn sm',id:'csv-btn',onclick:function(){downloadReport(H,list,stats)}},'Baixar CSV')),
+    h('div',{class:'stats'},
+      h('div',{class:'stat'},h('b',null,String(list.length)),h('span',null,'Jogadores')),
+      h('div',{class:'stat'},h('b',null,avg==null?'—':avg+'%'),h('span',null,'Acerto médio')),
+      h('div',{class:'stat'},h('b',null,String(hard.length)),h('span',null,'Para rever')),
+      h('div',{class:'stat'},h('b',null,stats.length+'/'+nq),h('span',null,'Perguntas jogadas'))));
+  if(stats.length){
+    card.append(h('h3',{class:'lbl',style:'margin:0'},'Acerto por pergunta'));
+    card.append(h('ol',{class:'rlist'},stats.map(function(st){
+      var pc=st.total?Math.round(st.right/st.total*100):0;
+      return h('li',{class:'rq '+pctClass(pc)},
+        h('span',{class:'rn'},'P'+st.n),
+        h('div',{class:'rt'},
+          h('span',{class:'rtext'},cleanQ(st.q).replace(/_{3,}/g,'___')),
+          h('span',{class:'muted'},'Certa: '+st.correct+(st.hints?' · '+plural(st.hints,'dica usada','dicas usadas'):''))),
+        h('span',{class:'rp'},pc+'%',pc<50?h('span',{class:'pill warn'},'Rever'):null),
+        h('div',{class:'rbar','aria-hidden':'true'},h('i',{style:'width:'+pc+'%'})));
+    })));
+  }else card.append(h('p',{class:'muted'},'Os dados por pergunta aparecem quando o jogo é jogado do início ao fim nesta tela.'));
+  if(list.length){
+    card.append(h('h3',{class:'lbl',style:'margin:0'},'Desempenho por aluno'));
+    card.append(h('div',{class:'tscroll'},h('table',{class:'rtable'},
+      h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'Nome'),h('th',null,'Acertos'),h('th',null,'Pontos'))),
+      h('tbody',null,list.map(function(e,i){
+        return h('tr',null,h('td',null,String(i+1)),h('td',null,e.name||'Jogador'),h('td',null,(e.correct||0)+'/'+(stats.length||nq)),h('td',null,fmt(e.score||0)));
+      })))));
+  }
+  return card;
+}
+function csvCell(v){v=String(v==null?'':v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function downloadReport(H,list,stats){
+  var rows=[['Relatório',H.title],['Data',new Date().toLocaleString('pt-BR')],[],
+    ['Pergunta','Texto','Resposta certa','Acertaram','Responderam','Jogadores','% de acerto','Dicas usadas']];
+  stats.forEach(function(st){rows.push(['P'+st.n,cleanQ(st.q),st.correct,st.right,st.answered,st.total,st.total?Math.round(st.right/st.total*100):0,st.hints||0])});
+  rows.push([]);rows.push(['Posição','Nome','Pontos','Acertos']);
+  list.forEach(function(e,i){rows.push([i+1,e.name||'Jogador',e.score||0,e.correct||0])});
+  var csv='\ufeff'+rows.map(function(r){return r.map(csvCell).join(';')}).join('\r\n');
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='relatorio-'+String(H.title||'quiz').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')+'-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
 }
 
 /* ---------- ao vivo: jogador ---------- */
@@ -1744,7 +1830,7 @@ function playerOpen(pin){
     var g=s.data(), prev=J.game;
     J.game=g;J.missing=false;
     if(g.status==='question'&&g.i!==J.lastQ){
-      J.lastQ=g.i;J.arrive=performance.now();J.choice=null;J.sent=false;J.timeUp=false;
+      J.lastQ=g.i;J.arrive=performance.now();J.choice=null;J.sent=false;J.timeUp=false;J.hintShown=false;
       if(J.joined){render();window.scrollTo(0,0);Snd.whoosh();cancelAnimationFrame(S.raf);S.raf=requestAnimationFrame(playerLoop)}
       return;
     }
@@ -1803,7 +1889,7 @@ async function playerAnswer(i){
   var ms=Math.round(performance.now()-J.arrive), qi=g.i;
   J.choice=i;J.sent=true;cancelAnimationFrame(S.raf);Snd.click();render();
   try{
-    await S.db.doc('games/'+J.pin+'/answers/'+qi+'-'+S.myId).set({q:qi,pid:S.myId,choice:i,ms:ms,at:new Date().toISOString()});
+    await S.db.doc('games/'+J.pin+'/answers/'+qi+'-'+S.myId).set({q:qi,pid:S.myId,choice:i,ms:ms,hint:!!J.hintShown,at:new Date().toISOString()});
   }catch(e){
     if(J.game&&J.game.i===qi&&J.game.status==='question'){J.sent=false;J.choice=null;J.err='A resposta não foi enviada. Tente de novo.';render()}
   }
@@ -1886,7 +1972,8 @@ function viewPlayer(){
       (g.q.limit||0)>0?ringEl(g.q.limit):null,
       h('div',{class:'qbody'},
         g.q.double?h('span',{class:'tag'},'Pontos ×2'):null,
-        h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(g.q.text,g.q.options,-1),false)))));
+        h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(g.q.text,g.q.options,-1),false)),
+        hintBlock(g.q.hint,J.hintShown,function(){J.hintShown=true;Snd.click();render()}))));
     root.append(h('div',{class:'tiles'},(g.q.options||[]).map(function(t,i){
       return h('button',{class:'ans',style:tileStyle(i),'aria-keyshortcuts':String(i+1),onclick:function(){playerAnswer(i)}},
         shape(i),h('span',{class:'t'},t),h('span'));
@@ -2068,6 +2155,14 @@ function adminRow(q,idx){
       idx>0?h('button',{class:'btn sm','aria-label':'Subir '+q.title,onclick:function(){adminDo(function(){return moveQuiz(idx,-1)},'Ordem atualizada.')}},'↑'):null,
       idx<S.quizzes.length-1?h('button',{class:'btn sm','aria-label':'Descer '+q.title,onclick:function(){adminDo(function(){return moveQuiz(idx,1)},'Ordem atualizada.')}},'↓'):null,
       h('button',{class:'btn sm',onclick:function(){openEditor(q)}},'Editar'),
+      h('button',{class:'btn sm',onclick:function(){
+        adminDo(async function(){
+          var r=normalize(plain(q));
+          if(!r.ok) throw new Error(r.error);
+          var now=new Date().toISOString();
+          await S.db.collection('quizzes').doc().set(Object.assign({},r.quiz,{title:(q.title+' (cópia)').slice(0,120),order:nextOrder(),hidden:true,createdAt:now,updatedAt:now}));
+        },'Cópia de “'+q.title+'” criada. Ela fica oculta até você revisar e marcar “Visível”.');
+      }},'Duplicar'),
       overrides?h('button',{class:'btn sm',onclick:function(){
         var qs=(q.questions||[]).map(function(x){var y=Object.assign({},x);delete y.time;return y});
         adminDo(function(){return ref.update({questions:qs,updatedAt:new Date().toISOString()})},'Todas as perguntas de “'+q.title+'” usam agora o tempo do quiz.');

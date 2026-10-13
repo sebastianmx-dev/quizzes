@@ -394,6 +394,28 @@ div.ans{cursor:default}
 .podium.anim .p1 .blk{animation-delay:1.6s}.podium.anim .p1>:not(.blk){animation-delay:2.2s}
 .podium .pod.p1 .av{border-radius:50%;animation:glow 2s ease-in-out .6s 3}
 .podium.anim .pod.p1 .av{animation:popIn .55s ease-out 2.2s both,glow 2s ease-in-out 2.8s 3}
+/* Dica */
+.hint{padding:10px 12px;border-radius:12px;background:var(--gold-soft);color:var(--ink);font-size:15px;line-height:1.45;overflow-wrap:anywhere}
+.hint-btn{border-color:var(--gold);background:var(--gold-soft);color:var(--ink)}
+/* Relatório */
+.report .stats .stat{background:var(--field)}
+.rlist{list-style:none;padding:0;display:flex;flex-direction:column;gap:12px}
+.rq{display:grid;grid-template-columns:2.4em minmax(0,1fr) auto;gap:4px 10px;align-items:start}
+.rn{font:700 13px var(--f-mono);color:var(--muted);padding-top:2px}
+.rt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rtext{font-weight:600;overflow-wrap:anywhere}
+.rt .muted{font-size:13px}
+.rp{font:800 18px var(--f-display);font-variant-numeric:tabular-nums;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.rbar{grid-column:2/4;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.rbar i{display:block;height:100%;border-radius:99px}
+.rq.ok .rbar i{background:var(--ok)}.rq.mid .rbar i{background:var(--gold)}.rq.low .rbar i{background:var(--bad)}
+.rq.low .rp{color:var(--bad)}
+.pill.warn{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+.tscroll{overflow-x:auto}
+.rtable{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.rtable th,.rtable td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+.rtable th{font:600 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rtable td:nth-child(n+3),.rtable th:nth-child(n+3){text-align:right}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* Base (antes vinha do invólucro do Claude) */
@@ -425,8 +447,8 @@ img{max-width:100%}
 </header>
 <main class="wrap" id="app"></main>
 
-<script src="firebase-config.js?v=202610130253"></script>
-<script type="module" src="backend-firebase.js?v=202610130253"></script>
-<script src="app.js?v=202610130253"></script>
+<script src="firebase-config.js?v=202610130301"></script>
+<script type="module" src="backend-firebase.js?v=202610130301"></script>
+<script src="app.js?v=202610130301"></script>
 </body>
 </html>
