@@ -49,6 +49,26 @@ Os e-mails dos gestores ficam só no seu banco de dados e não aparecem no códi
 2. Os alunos leem o QR com a câmera do celular (ou abrem o site e digitam o PIN), escrevem o nome, escolhem um avatar e entram.
 3. Clique em **Começar**. A resposta aparece quando todos respondem ou quando o tempo acaba.
 
+## Música
+As músicas ficam na pasta `audio/` e mudam conforme o momento do jogo: **sala de espera**, **perguntas** (acelera nos últimos 5 segundos) e **pódio**. Em **Gestão → Regras do jogo → Música** você escolhe, para cada momento, uma faixa específica, uma aleatória, a música gerada pelo navegador (só nas perguntas) ou nenhuma, e pode ouvir antes de salvar. No jogo ao vivo, a música toca só na tela do anfitrião.
+
+Para adicionar uma faixa, coloque o MP3 em `audio/` e acrescente uma linha na lista `TRACKS` no início de `app.js`.
+
+### Créditos das músicas
+Faixas da [Pixabay](https://pixabay.com/music/), sob a [Licença de Conteúdo da Pixabay](https://pixabay.com/service/license-summary/) (uso gratuito, sem atribuição obrigatória):
+
+| Momento | Faixa | Autor |
+|---|---|---|
+| Sala de espera | Playdate | Geoff Harvey |
+| Sala de espera | Funny Cartoon Music | Hitslab |
+| Sala de espera | Cartoon Music | TataMusic |
+| Perguntas | Cartoon Run | Elisaveta Stoycheva |
+| Perguntas | Cartoon Music | Maksym Malko |
+| Perguntas | Funny Music | AndriiH |
+| Perguntas | Cartoon Music | Starostin |
+| Pódio | Nomination Victory | Hitslab |
+| Pódio | Winner Champions | MFCC |
+
 ## Arquivos
 | Arquivo | Para que serve |
 |---|---|
@@ -58,6 +78,7 @@ Os e-mails dos gestores ficam só no seu banco de dados e não aparecem no códi
 | `firebase-config.js` | A configuração do seu projeto Firebase |
 | `firestore.rules` | Regras de segurança para colar no console do Firebase |
 | `data/quizzes.json` | Quizzes iniciais |
+| `audio/` | Músicas (MP3, 96 kbps, volume normalizado) |
 
 ## Limites do plano gratuito
 O plano Spark do Firebase inclui 50.000 leituras e 20.000 gravações por dia, o suficiente para várias turmas por dia. Em **Gestão** há um botão para excluir jogos ao vivo encerrados e manter o banco de dados leve.

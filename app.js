@@ -4,7 +4,21 @@ var app=document.getElementById('app'), hero=document.getElementById('hero');
 var LET='ABCDEF';
 var TIMES=[[0,'Sem limite'],[5,'5 s'],[10,'10 s'],[20,'20 s'],[30,'30 s'],[45,'45 s'],[60,'1 min'],[90,'1 min 30 s'],[120,'2 min']];
 var CIRC=2*Math.PI*26;
-var SET_DEFAULT={defaultTime:20,maxPoints:1000,minPct:50,streakStep:100,streakCap:500,countdown:true,showExplain:true,leaderboard:true,boardSize:10,sfx:true,music:true};
+var TRACKS=[
+  {id:'playdate',file:'audio/espera-playdate.mp3',title:'Playdate',author:'Geoff Harvey',cat:'lobby'},
+  {id:'funny-cartoon',file:'audio/espera-funny-cartoon.mp3',title:'Funny Cartoon Music',author:'Hitslab',cat:'lobby'},
+  {id:'cartoon-tata',file:'audio/espera-cartoon-tata.mp3',title:'Cartoon Music',author:'TataMusic',cat:'lobby'},
+  {id:'cartoon-run',file:'audio/pergunta-cartoon-run.mp3',title:'Cartoon Run',author:'Elisaveta Stoycheva',cat:'question'},
+  {id:'cartoon-maksym',file:'audio/pergunta-cartoon-maksym.mp3',title:'Cartoon Music',author:'Maksym Malko',cat:'question'},
+  {id:'funny-andriih',file:'audio/pergunta-funny-andriih.mp3',title:'Funny Music',author:'AndriiH',cat:'question'},
+  {id:'cartoon-starostin',file:'audio/pergunta-cartoon-starostin.mp3',title:'Cartoon Music',author:'Starostin',cat:'question'},
+  {id:'victory-hitslab',file:'audio/podio-victory-hitslab.mp3',title:'Nomination Victory',author:'Hitslab',cat:'winner'},
+  {id:'champions-mfcc',file:'audio/podio-champions-mfcc.mp3',title:'Winner Champions',author:'MFCC',cat:'winner'}
+];
+var MUSIC_PHASES=[['lobby','Sala de espera'],['question','Perguntas'],['winner','Pódio']];
+function trackById(id){return TRACKS.filter(function(t){return t.id===id})[0]||null}
+var SET_DEFAULT={defaultTime:20,maxPoints:1000,minPct:50,streakStep:100,streakCap:500,countdown:true,showExplain:true,leaderboard:true,boardSize:10,sfx:true,music:true,
+  music_lobby:'auto',music_question:'auto',music_winner:'auto'};
 var SET_OPTS={
   maxPoints:[[500,'500'],[1000,'1000'],[2000,'2000']],
   minPct:[[100,'100% (sem prêmio de rapidez)'],[75,'75%'],[50,'50%'],[25,'25%'],[0,'0%']],
@@ -19,6 +33,11 @@ function sanitizeSettings(raw){
   out.defaultTime=pick('defaultTime',TIMES.filter(function(t){return t[0]>0}));
   ['maxPoints','minPct','streakStep','streakCap','boardSize'].forEach(function(k){out[k]=pick(k,SET_OPTS[k])});
   ['countdown','showExplain','leaderboard','sfx','music'].forEach(function(k){out[k]=typeof raw[k]==='boolean'?raw[k]:SET_DEFAULT[k]});
+  MUSIC_PHASES.forEach(function(ph){
+    var k='music_'+ph[0], v=raw[k];
+    var ok=v==='auto'||v==='none'||(v==='generated'&&ph[0]==='question')||!!trackById(v);
+    out[k]=ok?v:SET_DEFAULT[k];
+  });
   return out;
 }
 function cfg(k){return S.settings[k]}
@@ -258,7 +277,20 @@ var Snd={
     var up=[523.25,659.25,783.99,1046.5,783.99,1046.5,1318.5], soft=[392,349.23,329.63,293.66];
     (ratio>=.5?up:soft).forEach(function(f,i){this.tone(f,t+i*.13,.3,{type:'triangle',vol:.24})},this);
   })},
-  musicStart:function(){
+  phase:null,
+  musicStart:function(phase){
+    phase=phase||'question';
+    this.phase=phase;
+    if(!this.music) return;
+    var src=musicSource(phase);
+    if(src==='generated'){Music.stop();this.init();this.genStart()}
+    else if(src){this.genStop();Music.play(src,phase!=='winner')}
+    else this.silence();
+  },
+  musicStop:function(){this.phase=null;this.silence()},
+  silence:function(){this.genStop();Music.stop()},
+  hurry:function(on){Music.hurry(on)},
+  genStart:function(){
     var s=this;
     if(!s.music||!s.ctx||s.mt) return;
     s.step=0;s.nt=s.ctx.currentTime+.08;
@@ -266,7 +298,7 @@ var Snd={
       while(s.nt<s.ctx.currentTime+.35){s.note(s.step,s.nt);s.nt+=.2;s.step=(s.step+1)%32}
     },80);
   },
-  musicStop:function(){if(this.mt){clearInterval(this.mt);this.mt=null}},
+  genStop:function(){if(this.mt){clearInterval(this.mt);this.mt=null}},
   note:function(st,t){
     var LEAD=[0,2,4,2,5,4,2,1, 0,2,4,5,7,5,4,2, 3,5,7,5,8,7,5,3, 2,4,5,4,7,5,4,2];
     var SC=[220,261.63,293.66,329.63,392,440,523.25,587.33,659.25];
@@ -275,6 +307,53 @@ var Snd={
     if(st%4===0) this.tone(BASS[Math.floor(st/4)%8],t,.38,{type:'sine',vol:.9,dest:this.mgain});
   }
 };
+var gamePicks={};
+function resetMusicPicks(){gamePicks={}}
+function musicSource(phase){
+  var v=cfg('music_'+phase);
+  if(v==='none') return null;
+  if(v==='generated') return 'generated';
+  var t=trackById(v);
+  if(t) return t;
+  if(!gamePicks[phase]){
+    var list=TRACKS.filter(function(x){return x.cat===phase});
+    gamePicks[phase]=list[Math.floor(Math.random()*list.length)]||null;
+  }
+  return gamePicks[phase];
+}
+var Music={
+  el:null,cur:null,vol:.6,previewTimer:0,
+  play:function(track,loop){
+    if(this.cur===track.id&&this.el&&!this.el.paused){this.hurry(false);return}
+    this.stop();
+    var a=new Audio(track.file);
+    a.loop=!!loop;a.preload='auto';
+    try{a.preservesPitch=false;a.mozPreservesPitch=false;a.webkitPreservesPitch=false}catch(e){}
+    try{a.volume=0}catch(e){}
+    this.el=a;this.cur=track.id;
+    var pr=a.play();if(pr&&pr.catch)pr.catch(function(){});
+    this.fade(a,this.vol,500,false);
+  },
+  fade:function(a,to,ms,pauseAtEnd){
+    var from=a.volume, t0=performance.now();
+    (function step(now){
+      var k=Math.min(1,(now-t0)/ms);
+      try{a.volume=Math.max(0,Math.min(1,from+(to-from)*k))}catch(e){}
+      if(k<1) requestAnimationFrame(step); else if(pauseAtEnd){try{a.pause()}catch(e){}}
+    })(t0);
+    if(pauseAtEnd) setTimeout(function(){try{a.pause()}catch(e){}},ms+150);
+  },
+  stop:function(){
+    clearTimeout(this.previewTimer);
+    if(this.el){var a=this.el;this.el=null;this.cur=null;this.fade(a,0,350,true)}
+  },
+  hurry:function(on){if(this.el){try{this.el.playbackRate=on?1.12:1}catch(e){}}}
+};
+function playWinner(ratio){
+  var src=Snd.music?musicSource('winner'):null;
+  if(src&&src!=='generated'&&ratio>=.5) Snd.musicStart('winner');
+  else{Snd.musicStop();Snd.finale(ratio)}
+}
 document.addEventListener('visibilitychange',function(){
   if(!Snd.ctx) return;
   try{if(document.hidden) Snd.ctx.suspend(); else Snd.ctx.resume()}catch(e){}
@@ -325,6 +404,7 @@ function leave(){
 function go(view){
   if(S.view==='play'&&view!=='play') stopGame();
   if((S.view==='host'||S.view==='player')&&view!==S.view) liveStop();
+  if(S.view==='admin'&&view!=='admin') stopPreview();
   S.view=view;render();window.scrollTo(0,0);
   var f=app.querySelector('[data-focus]');if(f)f.focus({preventScroll:true});
 }
@@ -504,6 +584,7 @@ function startPlay(quiz){
     gain:0,bonus:0,confirmExit:false,board:null,rank:null,saved:null,myId:null,limitMs:0,t0:0,count:3};
   S.play=p;
   go('play');
+  resetMusicPicks();Snd.init();Snd.musicStart('lobby');
   loadBoard(quiz.id).then(function(b){
     if(S.play!==p||p.phase!=='lobby') return;
     p.board=b;
@@ -545,8 +626,8 @@ function toggleBtn(kind){
     if(kind==='sfx'){Snd.sfx=!Snd.sfx;store.set('cq:sfx',Snd.sfx?'1':'0');if(Snd.sfx)Snd.click()}
     else{
       Snd.music=!Snd.music;store.set('cq:music',Snd.music?'1':'0');
-      if(!Snd.music) Snd.musicStop();
-      else if((S.view==='play'&&S.play&&S.play.phase==='question')||(S.view==='host'&&S.host&&(S.host.status==='question'||S.host.status==='lobby'))) Snd.musicStart();
+      if(!Snd.music) Snd.silence();
+      else if(Snd.phase) Snd.musicStart(Snd.phase);
     }
     paint();
   });
@@ -617,7 +698,7 @@ function viewLobby(p){
     p.pickOpen?avatarPicker():null,
     h('div',{class:'stack',style:'gap:10px'},
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-sfx',checked:Snd.sfx,onchange:function(e){Snd.sfx=e.target.checked;store.set('cq:sfx',Snd.sfx?'1':'0');Snd.init();if(Snd.sfx)Snd.click()}}),'Efeitos sonoros'),
-      h('label',{class:'check'},h('input',{type:'checkbox',id:'o-music',checked:Snd.music,onchange:function(e){Snd.music=e.target.checked;store.set('cq:music',Snd.music?'1':'0')}}),'Música durante as perguntas'),
+      h('label',{class:'check'},h('input',{type:'checkbox',id:'o-music',checked:Snd.music,onchange:function(e){Snd.music=e.target.checked;store.set('cq:music',Snd.music?'1':'0');Snd.init();if(!Snd.music)Snd.silence();else if(Snd.phase)Snd.musicStart(Snd.phase)}}),'Música'),
       h('label',{class:'check'},h('input',{type:'checkbox',id:'o-shuffle',checked:S.shuffle,onchange:function(e){S.shuffle=e.target.checked;store.set('cq:shuffle',S.shuffle?'1':'0')}}),'Embaralhar perguntas e opções')),
     h('div',null,h('button',{class:'btn go big',onclick:beginGame},'Começar'))));
   if(cfg('leaderboard')) root.append(h('div',{class:'gcard'},
@@ -629,7 +710,7 @@ function beginGame(){
   var p=S.play, nick=document.getElementById('nick');
   p.name=((nick?nick.value:p.name)||'').trim().slice(0,16)||'Jogador';
   store.set('cq:name',p.name);
-  Snd.init();Snd.click();
+  Snd.init();Snd.click();Snd.musicStop();
   p.qs=buildQs(p.quiz);
   p.i=0;p.score=0;p.prevScore=0;p.streak=0;p.bestStreak=0;p.correct=0;p.times=[];p.misses=[];
   if(!cfg('countdown')){Snd.go();beginQuestion();return}
@@ -701,6 +782,7 @@ function loop(){
       p.lastSec=secs;
       if(r.num) r.num.textContent=String(secs);
       if(secs<=5&&secs>0) Snd.tick(secs);
+      if(secs<=5) Snd.hurry(true);
     }
     var st=(p.limitMs-el)<=5000||frac>.85?'urgent':frac>.6?'warn':'ok';
     if(r.root&&r.root.getAttribute('data-tstate')!==st) r.root.setAttribute('data-tstate',st);
@@ -780,7 +862,7 @@ function finish(){
   if(!cur||cur.points==null||p.score>cur.points) store.set('cq:best:'+p.quiz.id,JSON.stringify({points:p.score,score:p.correct,total:p.qs.length}));
   render();window.scrollTo(0,0);
   var f=app.querySelector('[data-focus]');if(f)f.focus({preventScroll:true});
-  Snd.finale(p.correct/p.qs.length);
+  playWinner(p.correct/p.qs.length);
   saveScore(p);
 }
 async function saveScore(p){
@@ -1116,7 +1198,7 @@ function rankOf(list,id){var i=list.findIndex(function(e){return e.id===id});ret
 
 /* ---------- ao vivo: anfitrião ---------- */
 async function hostCreate(quiz){
-  S.libMsg='';
+  S.libMsg='';resetMusicPicks();
   var qs=buildQs(quiz).map(function(x){
     return {q:x.q,explain:x.explain,double:x.double,limit:x.limit,options:x.options.map(function(o){return o.t}),answer:x.options.findIndex(function(o){return o.ok})};
   });
@@ -1169,7 +1251,7 @@ function hostOpen(pin,qs,game){
     if(H.status==='lobby') hostPaint();
   });
   if(H.status==='question'){H.i=H.i-1;H.status=H.i<0?'lobby':'board';render()}
-  if(H.status==='lobby') Snd.musicStart();
+  if(H.status==='lobby') Snd.musicStart('lobby');
 }
 function hostPaint(){if(S.view==='host') rerenderKeepScroll()}
 function hostErr(e){var H=S.host;if(!H) return;H.err='Não foi possível atualizar o jogo: '+(e&&e.message||'erro desconhecido');hostPaint()}
@@ -1217,7 +1299,7 @@ function hostLoop(){
     if(r.ring) r.ring.style.strokeDashoffset=String(CIRC*frac);
     if(r.bar) r.bar.style.transform='scaleX('+(1-frac)+')';
     var secs=Math.max(0,Math.ceil((H.limitMs-el)/1000));
-    if(secs!==H.lastSec){H.lastSec=secs;if(r.num)r.num.textContent=String(secs);if(secs<=5&&secs>0)Snd.tick(secs)}
+    if(secs!==H.lastSec){H.lastSec=secs;if(r.num)r.num.textContent=String(secs);if(secs<=5&&secs>0)Snd.tick(secs);if(secs<=5)Snd.hurry(true)}
     var st=(H.limitMs-el)<=5000||frac>.85?'urgent':frac>.6?'warn':'ok';
     if(r.root&&r.root.getAttribute('data-tstate')!==st) r.root.setAttribute('data-tstate',st);
     if(el>=H.limitMs+400){hostReveal();return}
@@ -1264,7 +1346,7 @@ async function hostEnd(){
   store.set('cq:hostPin','');
   cancelAnimationFrame(S.raf);Snd.musicStop();
   render();window.scrollTo(0,0);
-  Snd.finale(1);
+  playWinner(1);
 }
 async function hostQuit(){
   var H=S.host;
@@ -1611,6 +1693,43 @@ function scoringExample(d){
   if(d.streakStep>0) s+=' Sequência: +'+d.streakStep+' por cada acerto seguido, até +'+d.streakCap+'.';
   return s;
 }
+function musicOpts(ph){
+  var own=TRACKS.filter(function(t){return t.cat===ph}), other=TRACKS.filter(function(t){return t.cat!==ph});
+  var o=[['auto','Aleatória']];
+  own.forEach(function(t){o.push([t.id,t.title+' · '+t.author])});
+  other.forEach(function(t){o.push([t.id,t.title+' · '+t.author+' (outra categoria)'])});
+  if(ph==='question') o.push(['generated','Gerada pelo navegador']);
+  o.push(['none','Sem música']);
+  return o;
+}
+function stopPreview(){
+  if(S.previewPh){S.previewPh=null;Music.stop();Snd.genStop()}
+}
+function previewMusic(ph,val){
+  var was=S.previewPh;
+  stopPreview();
+  if(was===ph){rerenderKeepScroll();return}
+  Snd.init();
+  var t=val==='auto'?(function(){var l=TRACKS.filter(function(x){return x.cat===ph});return l[Math.floor(Math.random()*l.length)]})():trackById(val);
+  if(val==='generated'){Snd.genStart()}
+  else if(t){Music.play(t,false)}
+  else{rerenderKeepScroll();return}
+  S.previewPh=ph;
+  clearTimeout(Music.previewTimer);
+  Music.previewTimer=setTimeout(function(){if(S.previewPh===ph){stopPreview();if(S.view==='admin')rerenderKeepScroll()}},15000);
+  rerenderKeepScroll();
+}
+function musicSettings(d){
+  return h('div',{class:'stack',style:'gap:10px'},
+    h('h4',{class:'lbl',style:'margin:8px 0 0'},'Música'),
+    h('div',{class:'music-grid'},MUSIC_PHASES.map(function(ph){
+      var k='music_'+ph[0];
+      return h('div',{class:'mrow'},
+        selectField(ph[1],'s-mus-'+ph[0],d[k],musicOpts(ph[0]),function(v){d[k]=v;if(S.previewPh===ph[0])stopPreview()}),
+        h('button',{class:'btn sm',id:'s-mus-'+ph[0]+'-play','aria-pressed':String(S.previewPh===ph[0]),onclick:function(){previewMusic(ph[0],d[k])}},S.previewPh===ph[0]?'Parar':'Ouvir'));
+    })),
+    h('p',{class:'muted'},'“Aleatória” sorteia uma faixa a cada jogo. Nas perguntas, a música acelera nos últimos 5 segundos. No jogo ao vivo, a música toca só na tela do anfitrião.'));
+}
 function viewAdmin(){
   var d=S.setDraft||(S.setDraft=Object.assign({},S.settings));
   var root=h('div',{class:'stack'});
@@ -1636,6 +1755,7 @@ function viewAdmin(){
       boolCheck('Tabela de pontuações','s-lb',d,'leaderboard'),
       boolCheck('Efeitos sonoros ligados por padrão','s-sfx',d,'sfx'),
       boolCheck('Música ligada por padrão','s-music',d,'music')),
+    musicSettings(d),
     h('p',{class:'muted'},'O tempo padrão vale para os quizzes marcados com “Padrão”. Som e música são o ponto de partida: cada jogador pode mudar no próprio aparelho.'),
     h('div',{class:'qa'},
       h('button',{class:'btn primary',onclick:function(){
