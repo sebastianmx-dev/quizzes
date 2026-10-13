@@ -1286,6 +1286,30 @@ function playerRows(list,myId,max,showLast){
 function rankOf(list,id){var i=list.findIndex(function(e){return e.id===id});return i<0?null:i+1}
 
 /* ---------- ao vivo: anfitrião ---------- */
+function validTimeMode(v){
+  if(v==='default'||v==='quiz') return v;
+  if(typeof v==='string'&&/^t\d+$/.test(v)&&TIMES.some(function(t){return 't'+t[0]===v})) return v;
+  return 'default';
+}
+function liveLimit(H,q){
+  if(H.timeMode==='quiz') return q.limit;
+  if(H.timeMode==='default') return defTime();
+  return parseInt(H.timeMode.slice(1),10);
+}
+function quizTimeSummary(qs){
+  var set={};qs.forEach(function(q){set[q.limit]=1});
+  var ks=Object.keys(set).map(Number);
+  if(ks.length===1) return ks[0]===0?'sem limite':(ks[0]>=60&&ks[0]%60===0?ks[0]/60+' min':ks[0]+' s');
+  return 'varia por pergunta';
+}
+function liveTimeSelect(H){
+  var opts=[['default','Padrão das regras ('+timeLabel(defTime()).replace(' por pergunta','')+')'],['quiz','Definido no quiz ('+quizTimeSummary(H.qs)+')']]
+    .concat(TIMES.map(function(t){return ['t'+t[0],t[0]===0?'Sem limite para todas':t[1]+' para todas']}));
+  return selectField('Tempo por pergunta','live-time',H.timeMode,opts,function(v){
+    H.timeMode=validTimeMode(v);
+    hostSet({timeMode:H.timeMode}).catch(function(){});
+  });
+}
 async function hostCreate(quiz){
   S.libMsg='';resetMusicPicks();
   var qs=buildQs(quiz).map(function(x){
@@ -1301,7 +1325,7 @@ async function hostCreate(quiz){
   if(!pin) throw new Error('não consegui gerar um PIN livre.');
   var now=new Date().toISOString();
   await S.db.doc('gamekeys/'+pin).set({qs:qs,quizId:quiz.id,at:now});
-  var game={pin:pin,quizId:quiz.id,title:quiz.title||'Quiz',hostId:S.myId||'',status:'lobby',i:-1,n:qs.length,q:null,reveal:null,createdAt:now,updatedAt:now};
+  var game={pin:pin,quizId:quiz.id,title:quiz.title||'Quiz',hostId:S.myId||'',status:'lobby',i:-1,n:qs.length,q:null,reveal:null,timeMode:'default',createdAt:now,updatedAt:now};
   await S.db.doc('games/'+pin).set(game);
   store.set('cq:hostPin',pin);
   hostOpen(pin,qs,game);
@@ -1318,7 +1342,8 @@ async function hostResume(){
 function hostOpen(pin,qs,game){
   liveStop();
   var H={pin:pin,qs:qs,title:game.title||'Quiz',status:game.status,i:typeof game.i==='number'?game.i:-1,
-    players:{},scores:{},answers:{},reveal:game.reveal||null,t0:0,limitMs:0,busy:false,qr:null,qrFailed:false,confirmExit:false,err:'',ansUnsub:null};
+    players:{},scores:{},answers:{},reveal:game.reveal||null,t0:0,limitMs:0,curLimit:0,busy:false,qr:null,qrFailed:false,confirmExit:false,err:'',ansUnsub:null,
+    timeMode:validTimeMode(game.timeMode)};
   S.host=H;
   go('host');
   sub(S.db.collection('games/'+pin+'/players').onSnapshot(function(snap){
@@ -1355,8 +1380,9 @@ async function hostNextQuestion(){
   try{
     var i=H.i+1, q=H.qs[i];
     H.answers={};
-    await hostSet({status:'question',i:i,q:{text:q.q,options:q.options,limit:q.limit,double:q.double},reveal:null});
-    H.i=i;H.status='question';H.limitMs=q.limit*1000;H.t0=performance.now();H.lastSec=-1;H.reveal=null;
+    var lim=liveLimit(H,q);
+    await hostSet({status:'question',i:i,q:{text:q.q,options:q.options,limit:lim,double:q.double},reveal:null});
+    H.i=i;H.status='question';H.curLimit=lim;H.limitMs=lim*1000;H.t0=performance.now();H.lastSec=-1;H.reveal=null;
     if(H.ansUnsub) H.ansUnsub();
     H.ansUnsub=sub(S.db.collection('games/'+H.pin+'/answers').where('q','==',i).onSnapshot(function(snap){
       if(S.host!==H||H.i!==i) return;
@@ -1406,7 +1432,7 @@ async function hostReveal(){
     var choice=a&&Number.isInteger(a.choice)&&a.choice>=0&&a.choice<q.options.length?a.choice:-1;
     if(choice>=0) counts[choice]++;
     var ok=choice===q.answer, streak=ok?(prev.streak||0)+1:0;
-    var pts=ok?pointsFor(Math.max(0,+a.ms||0),q.limit,q.double,streak):{total:0,bonus:0};
+    var pts=ok?pointsFor(Math.max(0,+a.ms||0),H.curLimit,q.double,streak):{total:0,bonus:0};
     var doc={name:String(pl.name||'Jogador').slice(0,16),avatar:typeof pl.avatar==='string'?pl.avatar.slice(0,40):'',
       score:(prev.score||0)+pts.total,streak:streak,correct:(prev.correct||0)+(ok?1:0),
       last:{i:H.i,ok:ok,points:pts.total,bonus:pts.bonus,choice:choice}};
@@ -1491,6 +1517,7 @@ function hostLobby(H){
       list.length
         ?h('ul',{class:'plist'},list.map(function(pl){return h('li',{class:'pchip'},avSvg(avOf(pl),40),h('span',null,pl.name||'Jogador'))}))
         :h('p',{class:'waiting'},'Esperando jogadores…'),
+      liveTimeSelect(H),
       h('div',{class:'footbar'},
         h('button',{class:'btn go big',disabled:!list.length||H.busy,onclick:hostNextQuestion},'Começar'),
         h('span',{class:'muted'},plural(H.qs.length,'pergunta','perguntas'))))));
@@ -1498,13 +1525,14 @@ function hostLobby(H){
 }
 function hostQuestion(H){
   var q=H.qs[H.i], timed=H.limitMs>0, total=Object.keys(H.players).length;
+  var ringSecs=H.curLimit;
   var got=Object.keys(H.answers).filter(function(pid){return pid in H.players}).length;
   var root=h('div',{class:'game stack','data-tstate':'ok'});
   S.refs.root=root;
   root.append(liveBar(h('span',{class:'chip'},(H.i+1)+' / '+H.qs.length),H.title,hostExitNode(H)));
   if(timed){var fill=h('i');S.refs.bar=fill;root.append(h('div',{class:'tbar'},fill))}
   root.append(h('div',{class:'qcard'},
-    timed?ringEl(q.limit):null,
+    timed?ringEl(ringSecs):null,
     h('div',{class:'qbody'},
       q.double?h('span',{class:'tag'},'Pontos ×2'):null,
       h('h2',{class:'qtext',tabindex:'-1','data-focus':''},qText(liveQ(q.q,q.options,q.answer),false)))));
