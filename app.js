@@ -636,13 +636,62 @@ function go(view){
   var f=app.querySelector('[data-focus]');if(f)f.focus({preventScroll:true});
 }
 function render(){
-  var playing=S.view==='play'||S.view==='host'||S.view==='player';
+  var guest=S.view==='library'&&!S.canWrite;
+  var playing=S.view==='play'||S.view==='host'||S.view==='player'||guest;
   document.body.classList.toggle('playing',playing);
   app.classList.toggle('wide',playing);
   hero.hidden=playing;
   hero.classList.toggle('compact',S.view!=='library');
-  var v=S.view==='host'?viewHost():S.view==='player'?viewPlayer():S.view==='play'?viewPlay():S.view==='edit'?viewEditor():S.view==='admin'?viewAdmin():viewLibrary();
+  var v=S.view==='host'?viewHost():S.view==='player'?viewPlayer():S.view==='play'?viewPlay():S.view==='edit'?viewEditor():S.view==='admin'?viewAdmin():guest?viewGuestHome():viewLibrary();
   app.replaceChildren(v);
+}
+
+/* ---------- entrada para visitantes (sem lista de quizzes) ---------- */
+function pinInput(cls,onJoin){
+  var inp=h('input',{id:'join-pin',class:cls,type:'text',inputmode:'numeric',autocomplete:'off',maxlength:'7',placeholder:'000 000','aria-label':'PIN do jogo',value:S.joinPin||null});
+  inp.addEventListener('input',function(){
+    var d=inp.value.replace(/\D/g,'').slice(0,6);
+    var f=d.length>3?d.slice(0,3)+' '+d.slice(3):d;
+    if(f!==inp.value) inp.value=f;
+    S.joinPin=inp.value;
+    var e=document.getElementById('pin-err');if(e)e.textContent='';
+  });
+  inp.addEventListener('keydown',function(e){if(e.key==='Enter')onJoin()});
+  return inp;
+}
+function joinWith(inp){
+  var d=(inp.value||'').replace(/\D/g,''), e=document.getElementById('pin-err');
+  if(d.length!==6){if(e)e.textContent='O PIN tem 6 dígitos.';inp.focus();return}
+  S.joinPin='';Snd.init();playerOpen(d);
+}
+function viewGuestHome(){
+  var ready=!!(S.db&&S.myId);
+  var inp;
+  var go_=function(){if(ready)joinWith(inp)};
+  inp=pinInput('in big-pin',go_);
+  var shapes=h('div',{class:'gmark','aria-hidden':'true'},[0,1,2,3].map(function(i){var sp=h('span',{style:tileStyle(i)});sp.append(shape(i));return sp}));
+  var cast=[KID_PRESETS[0],ANIMAL_PRESETS[0],AV_PRESETS[19],KID_PRESETS[14],ANIMAL_PRESETS[9],AV_PRESETS[6],ANIMAL_PRESETS[2]];
+  var err=null;
+  if(S.failed) err=S.setupMissing?'Este site ainda não está conectado a um banco de dados.':'Não consegui conectar ao servidor. Verifique sua conexão e recarregue a página.';
+  else if(S.auth&&S.authErr) err='Não foi possível entrar: '+S.authErr;
+  return h('div',{class:'ghome'},
+    h('div',{class:'gbrand'},shapes,
+      h('h1',{tabindex:'-1','data-focus':''},'Caderno de Quizzes'),
+      h('p',null,'Quizzes ao vivo na sala de aula')),
+    h('div',{class:'gavs','aria-hidden':'true'},cast.map(function(c){return avSvg(avParse(c),52)})),
+    h('div',{class:'gcard gjoin'},
+      h('label',{class:'lbl',for:'join-pin',style:'margin:0'},'PIN do jogo'),
+      inp,
+      h('button',{class:'btn go big',disabled:!ready,onclick:go_},ready?'Entrar':(err?'Indisponível':'Conectando…')),
+      h('p',{class:'msg bad',id:'pin-err',role:'alert'},err||'')),
+    h('ol',{class:'gsteps'},
+      h('li',null,h('b',null,'1'),h('span',null,'O professor abre o jogo e mostra o PIN na tela.')),
+      h('li',null,h('b',null,'2'),h('span',null,'Digite o PIN aqui ou leia o QR com a câmera do celular.')),
+      h('li',null,h('b',null,'3'),h('span',null,'Escolha seu nome e avatar e responda o mais rápido que puder.'))),
+    S.auth?h('div',{class:'gfoot'},
+      S.authEmail?[h('span',null,S.authEmail+' não tem permissão de gestor.'),h('button',{class:'btn sm',onclick:adminLogout},'Sair')]
+        :[h('span',null,'É professor?'),h('button',{class:'btn sm',onclick:adminLogin},'Entrar como gestor')]):null,
+    S.libMsg?h('p',{class:'msg bad',role:'alert'},S.libMsg):null);
 }
 
 /* ---------- biblioteca ---------- */
@@ -665,15 +714,9 @@ function viewLibrary(){
         try{await S.db.doc('games/'+pin).update({status:'ended',cancelled:true,updatedAt:new Date().toISOString()})}catch(e){}
       }},'Terminar'))));
   if(S.db&&S.myId){
-    var pinIn=h('input',{id:'join-pin',class:'in pin-in',type:'text',inputmode:'numeric',autocomplete:'off',maxlength:'7',placeholder:'000 000','aria-label':'PIN do jogo',value:S.joinPin||null});
+    var pinIn, doJoin=function(){joinWith(pinIn)};
+    pinIn=pinInput('in pin-in',doJoin);
     var pinErr=h('p',{class:'msg bad',id:'pin-err',role:'alert'});
-    var doJoin=function(){
-      var d=(pinIn.value||'').replace(/\D/g,'');
-      if(d.length!==6){pinErr.textContent='O PIN tem 6 dígitos.';pinIn.focus();return}
-      S.joinPin='';Snd.init();playerOpen(d);
-    };
-    pinIn.addEventListener('input',function(){S.joinPin=pinIn.value;pinErr.textContent=''});
-    pinIn.addEventListener('keydown',function(e){if(e.key==='Enter')doJoin()});
     root.append(h('div',{class:'panel joinbox'},
       h('label',{class:'lbl',for:'join-pin',style:'margin:0'},'Entrar em um jogo ao vivo'),
       h('div',{class:'joinrow'},pinIn,h('button',{class:'btn primary',onclick:doJoin},'Entrar')),
@@ -2296,7 +2339,12 @@ function applyAuth(){
   S.authEmail=a.email||'';
   S.authErr=a.error||'';
   if(S.canHost&&(!wasAdmin||prevId!==S.myId)) checkHostResume();
+  if(S.canWrite) ensureQuizSub();
   if(!S.canHost) S.hostResume=null;
+}
+function ensureQuizSub(){
+  if(S.quizSub||!S.db) return;
+  try{S.quizSub=S.db.collection('quizzes').onSnapshot(onSnap,onErr)}catch(e){onErr()}
 }
 function checkHostResume(){
   var hpin=store.get('cq:hostPin');
@@ -2336,7 +2384,6 @@ function adminLogout(){
   var hp=hashPin();
   if(hp) playerOpen(hp);
   window.addEventListener('hashchange',function(){var p=hashPin();if(p&&!(S.view==='player'&&S.join&&S.join.pin===p))playerOpen(p)});
-  try{db.collection('quizzes').onSnapshot(onSnap,onErr)}catch(e){onErr()}
   try{db.doc('config/settings').onSnapshot(function(s){
     applySettings(s.exists?s.data():{});
     if(S.view==='library'||S.view==='admin') rerenderKeepScroll();

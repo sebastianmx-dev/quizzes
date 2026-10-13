@@ -89,5 +89,8 @@ Faixas da [Pixabay](https://pixabay.com/music/), sob a [Licença de Conteúdo da
 | `data/quizzes.json` | Quizzes iniciais |
 | `audio/` | Músicas (MP3, 96 kbps, volume normalizado) |
 
+## Próximos passos
+As ideias para próximas versões estão em [`IDEIAS.md`](IDEIAS.md).
+
 ## Limites do plano gratuito
 O plano Spark do Firebase inclui 50.000 leituras e 20.000 gravações por dia, o suficiente para várias turmas por dia. Em **Gestão** há um botão para excluir jogos ao vivo encerrados e manter o banco de dados leve.
